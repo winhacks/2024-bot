@@ -18,12 +18,7 @@ import {NotInGuildResponse, TeamFullResponse} from "./team-shared";
 import {MessageButtonStyles} from "discord.js/typings/enums";
 import {hyperlink, userMention} from "@discordjs/builders";
 import {Team} from "@prisma/client";
-import {
-    UpsertInvite,
-    GetMembersOfTeam,
-    GetUserInvites,
-    IsHackerVerified,
-} from "../../helpers/database";
+import {UpsertInvite, GetMembersOfTeam, IsHackerVerified} from "../../helpers/database";
 
 export const InviteToTeam = async (
     intr: CommandInteraction<CacheType>,

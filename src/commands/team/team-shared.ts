@@ -13,10 +13,10 @@ import {Config} from "../../config";
 import {
     RemoveHackerFromTeam,
     GetMembersOfTeam,
-    GetUserTeam,
     WithTransaction,
     CreateCategory,
     GetAllCategories,
+    GethackerTeam,
 } from "../../helpers/database";
 import {ChannelLink} from "../../helpers/misc";
 import {ResponseEmbed, SuccessMessage} from "../../helpers/responses";
@@ -279,7 +279,7 @@ export const HandleLeaveTeam = async (
     user: User,
     team?: Team
 ): Promise<string> => {
-    team ??= (await GetUserTeam(user.id)) ?? undefined;
+    team ??= (await GethackerTeam(user.id)) ?? undefined;
     if (!team) {
         return "Could not find user's team";
     }

@@ -1,7 +1,7 @@
 import {SlashCommandBuilder} from "@discordjs/builders";
 import {CacheType, CommandInteraction, Guild, GuildMember} from "discord.js";
 import {Config} from "../config";
-import {GetUserTeam, IsHackerVerified, SetHackerVerified} from "../helpers/database";
+import {GethackerTeam, IsHackerVerified, SetHackerVerified} from "../helpers/database";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
 import {TakeUserRole} from "../helpers/userManagement";
@@ -32,7 +32,7 @@ const unverifyModule: CommandType = {
         }
 
         // check if user is in team
-        const userTeam = await GetUserTeam(intr.user.id);
+        const userTeam = await GethackerTeam(intr.user.id);
         if (userTeam !== null) {
             return SafeReply(
                 intr,

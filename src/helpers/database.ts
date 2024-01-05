@@ -7,6 +7,14 @@ export const GetStandardizedTeamName = (displayName: string): string => {
     return Discordify(displayName).toLowerCase();
 };
 
+/**
+ * Determines how many (un)verified hackers the bot knows about. The bot knows
+ * about a hacker if they have ever successfully ran `/verify`, even if they
+ * have since used `/unverify`.
+ *
+ * @param includeUnverified whether or not to include unverified hackers.
+ * @returns the number of hackers, optionally including unverified ones.
+ */
 export const GetHackerCount = async (
     includeUnverified: boolean = false
 ): Promise<number> => {
@@ -33,7 +41,7 @@ export const GetHacker = async (discordId: string) => {
 };
 
 export const IsHackerVerified = async (discordId: string): Promise<boolean> => {
-    const hacker = await prisma.hacker.findUnique({where: {discordId}});
+    const hacker = await GetHacker(discordId);
     return hacker?.verified ?? false;
 };
 
@@ -103,6 +111,13 @@ export const GethackerInvites = async (discordId: string) => {
     return await prisma.invite.findMany({where: {inviteeId: discordId}});
 };
 
+/**
+ * Finds and returns the team a Discord user belongs to, if one exists.
+ *
+ * @param discordId the discord snowflake identifying the user
+ * @returns the team that the discord user belongs to, or null if
+ * they are not in a team.
+ */
 export const GethackerTeam = async (discordId: string) => {
     const hacker = await GetHacker(discordId);
     if (!hacker?.teamStdName) {
@@ -142,6 +157,12 @@ export const GetAllCategories = async () => {
     });
 };
 
+/**
+ * Runs a given function within the context of a database transaction. The function
+ * return `false` or throw an error to abort the transaction. If the function
+ * completes returning `true`, the transaction is committed.
+ * @param callback the function to run
+ */
 export const WithTransaction = (callback: () => Promise<boolean>) => {
     return prisma.$transaction(async (tx) => {
         const result = await callback();

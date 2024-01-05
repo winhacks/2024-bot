@@ -1,14 +1,13 @@
 import {GuildMember} from "discord.js";
 import {SelectPlural} from "../helpers/misc";
-import {GetVerifiedCount, SetVerifiedCount} from "../helpers/userManagement";
 import {ClientType, EventType} from "../types";
+import {GetHackerCount} from "../helpers/database";
 
 const userVerifiedModule: EventType = {
     eventName: "userVerified",
     once: false,
     execute: async (client: ClientType, member: GuildMember) => {
-        // update presence to reflect 1 more verified hacker
-        const registeredCount = SetVerifiedCount((await GetVerifiedCount()) + 1);
+        const registeredCount = await GetHackerCount(false);
         const message = SelectPlural(
             registeredCount,
             "nobody 😦",

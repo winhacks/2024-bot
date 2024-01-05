@@ -1,20 +1,5 @@
 import {GuildMember, RoleResolvable, User} from "discord.js";
 
-let memberCount: number | undefined = undefined;
-
-export const GetVerifiedCount = async (): Promise<number> => {
-    if (memberCount === undefined) {
-        memberCount = await CountEntities(verifiedCollection);
-    }
-
-    return memberCount;
-};
-
-export const SetVerifiedCount = (newCount: number): number => {
-    memberCount = newCount;
-    return memberCount;
-};
-
 export const GiveUserRole = async (
     member: GuildMember,
     role: RoleResolvable

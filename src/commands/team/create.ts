@@ -1,6 +1,6 @@
 import {CommandInteraction, CacheType} from "discord.js";
 import {Config} from "../../config";
-import {CreateTeam, GetTeam, GetUser} from "../../helpers/database";
+import {CreateTeam, GetTeam, GetHacker} from "../../helpers/database";
 import {
     ErrorMessage,
     SafeDeferReply,
@@ -47,7 +47,7 @@ export const CreateTeamSubcommand = async (
         return SafeReply(intr, NameTakenResponse());
     }
 
-    const user = await GetUser(intr.user.id);
+    const user = await GetHacker(intr.user.id);
     if (!user!.verified) {
         return SafeReply(intr, NotVerifiedResponse());
     } else if (user!.teamStdName != null) {

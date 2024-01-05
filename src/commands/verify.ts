@@ -12,7 +12,7 @@ import {GiveUserRole, RenameUser, TakeUserRole} from "../helpers/userManagement"
 import {logger} from "../logger";
 import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
-import {CreateUser, GetUser, IsEmailVerified} from "../helpers/database";
+import {CreateHacker, GetHacker, IsEmailVerified} from "../helpers/database";
 
 // source: https://www.emailregex.com/ (apparently 99.99% accurate)
 const emailRegex =
@@ -57,7 +57,7 @@ const verifyModule: CommandType = {
          *    user's data.
          */
 
-        if ((await GetUser(intr.user.id))?.verified) {
+        if ((await GetHacker(intr.user.id))?.verified) {
             return SafeReply(
                 intr,
                 ErrorMessage({
@@ -134,7 +134,7 @@ const verifyModule: CommandType = {
         }
 
         // insert user into database
-        const user = await CreateUser(
+        const user = await CreateHacker(
             member.user.id,
             userData.firstName,
             userData.lastName,

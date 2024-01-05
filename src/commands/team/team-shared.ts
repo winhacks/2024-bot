@@ -11,7 +11,7 @@ import {
 import {ChannelTypes} from "discord.js/typings/enums";
 import {Config} from "../../config";
 import {
-    RemoveUserFromTeam,
+    RemoveHackerFromTeam,
     GetMembersOfTeam,
     GetUserTeam,
     WithTransaction,
@@ -303,7 +303,7 @@ const HandleMemberLeave = async (
          *    indicating someone left should also indicate the team is now abandoned.
          */
 
-        if ((await RemoveUserFromTeam(user.id)) === null) {
+        if ((await RemoveHackerFromTeam(user.id)) === null) {
             error = "Couldn't remove member from their team in the database";
             return false;
         }

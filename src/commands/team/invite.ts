@@ -22,7 +22,7 @@ import {
     UpsertInvite,
     GetMembersOfTeam,
     GetUserInvites,
-    IsUserVerified,
+    IsHackerVerified,
 } from "../../helpers/database";
 
 export const InviteToTeam = async (
@@ -65,7 +65,7 @@ export const InviteToTeam = async (
      * 3. The invitee must not have already been invited.
      */
 
-    const inviteeVerified = await IsUserVerified(invitee.id);
+    const inviteeVerified = await IsHackerVerified(invitee.id);
     if (!inviteeVerified) {
         return SafeReply(
             intr,

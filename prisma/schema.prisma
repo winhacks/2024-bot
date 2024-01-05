@@ -14,11 +14,11 @@ model Team {
     category       DiscordCategory @relation(fields: [categoryId], references: [categoryId])
     textChannelId  String
     voiceChannelId String
-    members        User[]
+    members        Hacker[]
     invites        Invite[]
 }
 
-model User {
+model Hacker {
     discordId String @id @unique
 
     firstName String
@@ -32,11 +32,13 @@ model User {
     verifiedAt DateTime?
 
     invites Invite[]
+
+    @@map("User")
 }
 
 model Invite {
     inviteeId String
-    invitee   User   @relation(fields: [inviteeId], references: [discordId])
+    invitee   Hacker @relation(fields: [inviteeId], references: [discordId])
 
     teamStdName String
     Team        Team   @relation(fields: [teamStdName], references: [stdName])

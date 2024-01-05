@@ -7,11 +7,11 @@ import {ErrorMessage, SafeReply, SuccessMessage} from "../../helpers/responses";
 import {GetUserTeam, GetVerifiedUser} from "../../helpers/userManagement";
 import {logger} from "../../logger";
 import {ButtonAction} from "../../types";
-import {IsUserVerified} from "../../helpers/database";
+import {IsHackerVerified} from "../../helpers/database";
 
 const inviteAction: ButtonAction = {
     execute: async (intr: ButtonInteraction<CacheType>) => {
-        if (!IsUserVerified(intr.user.id)) {
+        if (!IsHackerVerified(intr.user.id)) {
             return SafeReply(
                 intr,
                 ErrorMessage({

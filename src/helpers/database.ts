@@ -7,39 +7,39 @@ export const GetStandardizedTeamName = (displayName: string): string => {
     return Discordify(displayName).toLowerCase();
 };
 
-export const GetUserCount = async (
+export const GetHackerCount = async (
     includeUnverified: boolean = false
 ): Promise<number> => {
     if (includeUnverified) {
-        return await prisma.user.count();
+        return await prisma.hacker.count();
     }
 
-    return await prisma.user.count({where: {verified: true}});
+    return await prisma.hacker.count({where: {verified: true}});
 };
 
-export const CreateUser = async (
+export const CreateHacker = async (
     discordId: string,
     firstName: string,
     lastName: string,
     email: string
 ) => {
-    return await prisma.user.create({
+    return await prisma.hacker.create({
         data: {discordId, firstName, lastName, email},
     });
 };
 
-export const GetUser = async (discordId: string) => {
-    return await prisma.user.findUnique({where: {discordId}});
+export const GetHacker = async (discordId: string) => {
+    return await prisma.hacker.findUnique({where: {discordId}});
 };
 
-export const IsUserVerified = async (discordId: string): Promise<boolean> => {
-    const user = await prisma.user.findUnique({where: {discordId}});
-    return user?.verified ?? false;
+export const IsHackerVerified = async (discordId: string): Promise<boolean> => {
+    const hacker = await prisma.hacker.findUnique({where: {discordId}});
+    return hacker?.verified ?? false;
 };
 
 export const IsEmailVerified = async (email: string): Promise<boolean> => {
-    const userUsingEmail = await prisma.user.findFirst({where: {email}});
-    return userUsingEmail !== null;
+    const hackerUsingEmail = await prisma.hacker.findFirst({where: {email}});
+    return hackerUsingEmail !== null;
 };
 
 export const GetTeam = async (standardName: string) => {
@@ -47,7 +47,7 @@ export const GetTeam = async (standardName: string) => {
 };
 
 export const GetMembersOfTeam = async (standardName: string) => {
-    return await prisma.user.findMany({where: {teamStdName: standardName}});
+    return await prisma.hacker.findMany({where: {teamStdName: standardName}});
 };
 
 export const CreateTeam = async (
@@ -74,9 +74,9 @@ export const DeleteTeam = async (standardName: string) => {
     }
 };
 
-export const RemoveUserFromTeam = async (discordId: string) => {
+export const RemoveHackerFromTeam = async (discordId: string) => {
     try {
-        return await prisma.user.update({
+        return await prisma.hacker.update({
             where: {discordId},
             data: {teamStdName: null},
         });
@@ -99,27 +99,27 @@ export const UpsertInvite = async (inviteeId: string, teamStdName: string) => {
     }
 };
 
-export const GetUserInvites = async (discordId: string) => {
+export const GethackerInvites = async (discordId: string) => {
     return await prisma.invite.findMany({where: {inviteeId: discordId}});
 };
 
-export const GetUserTeam = async (discordId: string) => {
-    const user = await GetUser(discordId);
-    if (!user?.teamStdName) {
+export const GethackerTeam = async (discordId: string) => {
+    const hacker = await GetHacker(discordId);
+    if (!hacker?.teamStdName) {
         return null;
     }
 
-    return await GetTeam(user.teamStdName);
+    return await GetTeam(hacker.teamStdName);
 };
 
-export const SetUserVerified = async (discordId: string, verified: boolean) => {
+export const SetHackerVerified = async (discordId: string, verified: boolean) => {
     if (verified) {
-        return await prisma.user.update({
+        return await prisma.hacker.update({
             where: {discordId},
             data: {verified: true, verifiedAt: new Date()},
         });
     } else {
-        return await prisma.user.update({
+        return await prisma.hacker.update({
             where: {discordId},
             data: {verified: false},
         });

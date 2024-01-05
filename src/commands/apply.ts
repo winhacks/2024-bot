@@ -21,7 +21,7 @@ const applyModule: CommandType = {
         }
 
         if (!verifyChannelId) {
-            logger.error("Verify channel could not be found while running /apply.");
+            logger.error("Verify channel could not be found while running `/apply`.");
             return SafeReply(intr, ErrorMessage());
         }
 

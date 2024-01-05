@@ -35,6 +35,8 @@ interface ConfigType {
         registration_url: string;
         target_sheet_id: string;
         target_sheet: string;
+        first_name_column: string;
+        last_name_column: string;
         email_column: string;
         verified_role_name: string;
         channel_name: string;

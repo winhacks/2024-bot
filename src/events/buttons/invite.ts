@@ -1,18 +1,17 @@
 import {hyperlink} from "@discordjs/builders";
-import {APIMessage} from "discord-api-types";
-import {ButtonInteraction, CacheType, Guild, Message, TextChannel} from "discord.js";
+import {ButtonInteraction, CacheType, TextChannel} from "discord.js";
 import {TEAM_MEMBER_PERMS} from "../../commands/team/team-shared";
 import {Config} from "../../config";
-import {FindAndUpdate, FindOne, teamCollection} from "../../helpers/database";
 import {Timestamp} from "../../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../../helpers/responses";
 import {GetUserTeam, GetVerifiedUser} from "../../helpers/userManagement";
 import {logger} from "../../logger";
-import {ButtonAction, InviteType, TeamType} from "../../types";
+import {ButtonAction} from "../../types";
+import {IsUserVerified} from "../../helpers/database";
 
 const inviteAction: ButtonAction = {
     execute: async (intr: ButtonInteraction<CacheType>) => {
-        if (!GetVerifiedUser(intr.user)) {
+        if (!IsUserVerified(intr.user.id)) {
             return SafeReply(
                 intr,
                 ErrorMessage({

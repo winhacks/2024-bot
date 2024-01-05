@@ -6,13 +6,13 @@ import {
 } from "@discordjs/builders";
 import {CommandInteraction, CacheType} from "discord.js";
 import {ErrorMessage, SafeReply} from "../helpers/responses";
-import {CommandType, TeamType} from "../types";
-import {CreateTeam} from "./team/create";
+import {CommandType} from "../types";
+import {CreateTeamSubcommand} from "./team/create";
 import {TeamInfo} from "./team/info";
 import {InviteToTeam} from "./team/invite";
 import {LeaveTeam} from "./team/leave";
-import {FindOne, teamCollection} from "../helpers/database";
 import {NotInTeamResponse} from "./team/team-shared";
+import {GetTeam, GetUserTeam} from "../helpers/database";
 
 const teamModule: CommandType = {
     data: new SlashCommandBuilder() //
@@ -29,17 +29,6 @@ const teamModule: CommandType = {
                         .setRequired(true)
                 )
         )
-        // .addSubcommand(
-        //     new SlashCommandSubcommandBuilder()
-        //         .setName("rename")
-        //         .setDescription("Rename your team.")
-        //         .addStringOption(
-        //             new SlashCommandStringOption()
-        //                 .setName("name")
-        //                 .setDescription("The new name for your team")
-        //                 .setRequired(true)
-        //         )
-        // )
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
                 .setName("invite")
@@ -67,11 +56,11 @@ const teamModule: CommandType = {
 
         // user wants to create a new team
         if (subcommand === "create") {
-            return CreateTeam(intr);
+            return CreateTeamSubcommand(intr);
         }
 
         // team should exist for the rest, so look it up
-        const team = await FindOne<TeamType>(teamCollection, {members: intr.user.id});
+        const team = await GetUserTeam(intr.user.id);
         if (!team) {
             return SafeReply(intr, NotInTeamResponse(true));
         }
@@ -84,11 +73,6 @@ const teamModule: CommandType = {
         } else if (subcommand === "invite") {
             return InviteToTeam(intr, team);
         }
-
-        // disabled because the module is broken
-        // if (subcommand === "rename") {
-        //     return RenameTeam(intr, team);
-        // }
 
         return SafeReply(intr, ErrorMessage());
     },

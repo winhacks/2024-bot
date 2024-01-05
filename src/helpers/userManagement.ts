@@ -1,6 +1,4 @@
 import {GuildMember, RoleResolvable, User} from "discord.js";
-import {TeamType, VerifiedUserType} from "../types";
-import {CountEntities, FindOne, teamCollection, verifiedCollection} from "./database";
 
 let memberCount: number | undefined = undefined;
 

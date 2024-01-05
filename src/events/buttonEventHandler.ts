@@ -1,6 +1,6 @@
 import {CacheType, Collection, Interaction} from "discord.js";
 import {readdirSync} from "fs";
-import path, {format as formatPath} from "path";
+import {format as formatPath} from "path";
 import {ErrorMessage} from "../helpers/responses";
 import {logger} from "../logger";
 import {ButtonAction, ClientType, EventType} from "../types";

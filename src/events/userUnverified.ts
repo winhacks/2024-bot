@@ -1,10 +1,9 @@
 import {GuildMember} from "discord.js";
 import {HandleLeaveTeam} from "../commands/team/team-shared";
-import {FindOne, teamCollection} from "../helpers/database";
 import {SelectPlural} from "../helpers/misc";
 import {GetVerifiedCount, SetVerifiedCount} from "../helpers/userManagement";
 import {logger} from "../logger";
-import {ClientType, EventType, TeamType} from "../types";
+import {ClientType, EventType} from "../types";
 
 const userUnverifiedModule: EventType = {
     eventName: "userUnverified",

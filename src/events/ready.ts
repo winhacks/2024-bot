@@ -1,5 +1,3 @@
-import {Config} from "../config";
-import {CommandIDCache} from "../helpers/commandManager";
 import {SelectPlural} from "../helpers/misc";
 import {GetVerifiedCount} from "../helpers/userManagement";
 import {logger} from "../logger";

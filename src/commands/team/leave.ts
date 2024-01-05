@@ -1,10 +1,10 @@
 import {CacheType, CommandInteraction} from "discord.js";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../../helpers/responses";
 import {logger} from "../../logger";
-import {TeamType} from "../../types";
 import {HandleLeaveTeam, NotInGuildResponse} from "./team-shared";
+import {Team} from "@prisma/client";
 
-export const LeaveTeam = async (intr: CommandInteraction<CacheType>, team: TeamType) => {
+export const LeaveTeam = async (intr: CommandInteraction<CacheType>, team: Team) => {
     if (!intr.inGuild()) {
         return SafeReply(intr, NotInGuildResponse());
     }
@@ -17,7 +17,7 @@ export const LeaveTeam = async (intr: CommandInteraction<CacheType>, team: TeamT
         return await SafeReply(
             intr,
             SuccessMessage({
-                message: `You left Team ${team.name} successfully.`,
+                message: `You left Team ${team.displayName} successfully.`,
                 ephemeral: true,
             })
         );

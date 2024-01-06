@@ -4,7 +4,7 @@ Bot for WinHacks 2024, written in Typescript with Discord.JS. Uses a SQLite data
 
 ## Configuration
 
-To start, copy `config.json.example` to `config.json`.
+To start, copy `config.json5.example` to `config.json5`.
 
 ```bash
 # Mac/Linux:
@@ -14,7 +14,7 @@ cp config.json5.example config.json5
 copy config.json5.example config.json5
 ```
 
-**Reminder:** do not under _any_ circumstances commit the `config.json` file to version control. It more than likely contains secret information that you _really_ should keep secret.
+**Reminder:** do not under _any_ circumstances commit the `config.json5` file to version control. It more than likely contains secret information that you _really_ should keep secret.
 
 ### Discord API Configuration
 

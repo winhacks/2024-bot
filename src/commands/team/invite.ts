@@ -19,6 +19,7 @@ import {MessageButtonStyles} from "discord.js/typings/enums";
 import {hyperlink, userMention} from "@discordjs/builders";
 import {Team} from "@prisma/client";
 import {UpsertInvite, GetMembersOfTeam, IsHackerVerified} from "../../helpers/database";
+import {BuildInviteButtonId, InviteAction} from "../../events/buttons/invite";
 
 export const InviteToTeam = async (
     intr: CommandInteraction<CacheType>,
@@ -29,7 +30,6 @@ export const InviteToTeam = async (
     }
 
     const invitee = intr.options.getUser("user", true);
-    await SafeDeferReply(intr);
 
     // trivial check to see if a user is inviting themself
     if (intr.user.id === invitee.id && !Config.dev_mode) {
@@ -97,15 +97,14 @@ export const InviteToTeam = async (
         );
     }
 
-    // NOTE: custom IDs must be of form "invite;ACTION;TEAM_STD_NAME"
     const buttonRow = new MessageActionRow().setComponents(
         new MessageButton()
             .setStyle(MessageButtonStyles.SECONDARY)
-            .setCustomId(`invite;decline;${team.stdName}`)
+            .setCustomId(BuildInviteButtonId(InviteAction.Decline, invite))
             .setLabel("Decline"),
         new MessageButton()
             .setStyle(MessageButtonStyles.PRIMARY)
-            .setCustomId(`invite;accept;${team.stdName}`)
+            .setCustomId(BuildInviteButtonId(InviteAction.Accept, invite))
             .setLabel("Accept")
     );
     const inviteMsg = ResponseEmbed()

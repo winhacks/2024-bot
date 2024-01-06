@@ -1,7 +1,6 @@
 import {google} from "googleapis";
 import {Config} from "../config";
 import {logger} from "../logger";
-import {STATUS_CODES} from "http";
 
 export type MajorDimension = "ROWS" | "COLUMNS";
 
@@ -87,27 +86,29 @@ export const GetUserData = async (email: string) => {
 
     // find the last index of the input email, if it exists
     const emailIndex = emailColumn.lastIndexOf(email);
+    logger.info(`Found ${email} in row ${emailIndex}`);
 
     // email not in column, this user should not be verified
     if (emailIndex === -1) {
         return null;
     }
 
+    const emailRowNumber = emailIndex + 1;
     const ranges = await sheets.values.batchGet({
         spreadsheetId: Config.verify.target_sheet_id,
         majorDimension: "ROWS",
         ranges: [
             BuildSingleCellRange(
                 Config.verify.target_sheet,
-                `${Config.verify.first_name_column}${emailIndex}`
+                `${Config.verify.first_name_column}${emailRowNumber}`
             ),
             BuildSingleCellRange(
                 Config.verify.target_sheet,
-                `${Config.verify.last_name_column}${emailIndex}`
+                `${Config.verify.last_name_column}${emailRowNumber}`
             ),
             BuildSingleCellRange(
                 Config.verify.target_sheet,
-                `${Config.verify.email_column}${emailIndex}`
+                `${Config.verify.email_column}${emailRowNumber}`
             ),
         ],
     });

@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
     provider = "sqlite"
-    url      = "file:./database.db"
+    url      = "file:../data/database.sqlite"
 }
 
 model Team {
@@ -28,6 +28,7 @@ model Hacker {
     teamStdName String?
     team        Team?   @relation(fields: [teamStdName], references: [stdName])
 
+    // todo: this is redundant now, seeing as we nuke these records when someone unverifies/leaves
     verified   Boolean   @default(false)
     verifiedAt DateTime?
 
@@ -41,7 +42,7 @@ model Invite {
     invitee   Hacker @relation(fields: [inviteeId], references: [discordId])
 
     teamStdName String
-    Team        Team   @relation(fields: [teamStdName], references: [stdName])
+    Team        Team   @relation(fields: [teamStdName], references: [stdName], onDelete: Cascade)
 
     @@id([inviteeId, teamStdName])
     @@unique([inviteeId, teamStdName])

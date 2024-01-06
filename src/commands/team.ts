@@ -12,7 +12,7 @@ import {TeamInfo} from "./team/info";
 import {InviteToTeam} from "./team/invite";
 import {LeaveTeam} from "./team/leave";
 import {NotInTeamResponse} from "./team/team-shared";
-import {GetTeam, GethackerTeam} from "../helpers/database";
+import {GetHackerTeam} from "../helpers/database";
 
 const teamModule: CommandType = {
     data: new SlashCommandBuilder() //
@@ -60,7 +60,7 @@ const teamModule: CommandType = {
         }
 
         // team should exist for the rest, so look it up
-        const team = await GethackerTeam(intr.user.id);
+        const team = await GetHackerTeam(intr.user.id);
         if (!team) {
             return SafeReply(intr, NotInTeamResponse(true));
         }

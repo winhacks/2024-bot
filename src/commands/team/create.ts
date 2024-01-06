@@ -1,6 +1,12 @@
 import {CommandInteraction, CacheType} from "discord.js";
 import {Config} from "../../config";
-import {CreateTeam, GetTeam, GetHacker} from "../../helpers/database";
+import {
+    CreateTeam,
+    GetTeam,
+    GetHacker,
+    AddHackerToTeam,
+    WithTransaction,
+} from "../../helpers/database";
 import {
     ErrorMessage,
     SafeDeferReply,
@@ -17,6 +23,7 @@ import {
     NotVerifiedResponse,
     ValidateTeamName,
 } from "./team-shared";
+import {P} from "pino";
 
 export const CreateTeamSubcommand = async (
     intr: CommandInteraction<CacheType>
@@ -48,7 +55,7 @@ export const CreateTeamSubcommand = async (
     }
 
     const user = await GetHacker(intr.user.id);
-    if (!user!.verified) {
+    if (!user?.verified) {
         return SafeReply(intr, NotVerifiedResponse());
     } else if (user!.teamStdName != null) {
         return SafeReply(intr, AlreadyInTeamResponse());
@@ -64,13 +71,27 @@ export const CreateTeamSubcommand = async (
     const [teamText, teamVoice] = newChannels;
 
     // attempt to make and insert team
-    const newTeam = await CreateTeam(
-        teamName,
-        teamText.parentId!, // team channels will always have a category.
-        teamText.id,
-        teamVoice.id
-    );
-    if (!newTeam) {
+    let success = await WithTransaction(async () => {
+        const newTeam = await CreateTeam(
+            teamName,
+            teamText.parentId!, // team channels will always have a category.
+            teamText.id,
+            teamVoice.id
+        );
+
+        if (!newTeam) {
+            return false;
+        }
+
+        const addResult = await AddHackerToTeam(newTeam?.stdName, intr.user.id);
+        if (!addResult) {
+            return false;
+        }
+
+        return true;
+    });
+
+    if (!success) {
         return SafeReply(intr, ErrorMessage());
     }
 

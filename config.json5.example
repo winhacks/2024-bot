@@ -16,7 +16,7 @@
     },
 
     // should the bot be in development mode?
-    dev_mode: true,
+    dev_mode: false,
 
     // sheets API config
     sheets_api: {
@@ -25,21 +25,14 @@
         client_email: "",
     },
 
-    // MongoDB API config
-    mongo_db: {
-        database_url: "",
-        certificate: "",
-        private_key: "",
-    },
-
     // information for the /about command, and `color` dictates the bot embed color
     bot_info: {
         name: "",
         color: 0x14c3a2, // a hex literal of the form 0xRRGGBB
-        event_name: "WinHacks 2022",
+        event_name: "WinHacks 2024",
         title_url: "",
         thumbnail: "",
-        description: "An open-source Discord Bot written in TypeScript with Discord.JS by [Isaac Kilbourne](https://kilbouri.github.io) and published under the MIT license for WinHacks 2022.",
+        description: "An open-source Discord Bot written in TypeScript with Discord.JS by [Borhan Saflo](https://borhansaflo.com) and [Isaac Kilbourne](https://isaac.kilbourne.ca) and published under the MIT license for WinHacks 2022.",
     },
 
     // config for the /verify and /unverify commands
@@ -47,14 +40,15 @@
         registration_url: "",
         target_sheet_id: "",
         target_sheet: "",
-        email_column: "A",
+        first_name_column: "A",
+        last_name_column: "B",
+        email_column: "C",
         verified_role_name: "Verified",
-        channel_name: "❗verify",
+        channel_id: "1234567890",
     },
 
     // /team and subcommand config
     teams: {
-        database_name: "botDB",
         max_name_length: 20,
         max_team_size: 4,
         teams_per_category: 25, // each team creates 2 channels. Should be at MOST floor(DISCORD_CATEGORY_CHANNEL_LIMIT / 2)

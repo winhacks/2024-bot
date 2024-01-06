@@ -9,7 +9,6 @@ import {
     Collection,
     CommandInteraction,
 } from "discord.js";
-import {Filter, Document as MongoDocument} from "mongodb";
 
 export interface CommandType {
     data:
@@ -39,5 +38,3 @@ export enum TeamAvailability {
     "ALREADY_IN_TEAM",
     "AVAILABLE",
 }
-
-export type Query<T> = Filter<T>;

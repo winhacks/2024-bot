@@ -39,12 +39,11 @@ interface ConfigType {
         last_name_column: string;
         email_column: string;
         verified_role_name: string;
-        channel_name: string;
+        channel_id: string;
     };
 
     // teams command group config
     teams: {
-        database_name: string;
         max_name_length: number;
         max_team_size: number;
         teams_per_category: number;

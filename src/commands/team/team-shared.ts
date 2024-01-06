@@ -16,12 +16,11 @@ import {
     WithTransaction,
     CreateCategory,
     GetAllCategories,
-    GethackerTeam,
+    GetHackerTeam,
 } from "../../helpers/database";
-import {ChannelLink} from "../../helpers/misc";
-import {ResponseEmbed, SuccessMessage} from "../../helpers/responses";
+import {ErrorMessage, ResponseEmbed, SuccessMessage} from "../../helpers/responses";
 import {logger} from "../../logger";
-import {channelMention} from "@discordjs/builders";
+import {channelMention, userMention} from "@discordjs/builders";
 import {DiscordCategory, Team} from "@prisma/client";
 
 // PERMISSIONS ----------------------------------------------------------------
@@ -56,7 +55,7 @@ export const NotVerifiedResponse = (ephemeral: boolean = false) => {
                 .setTitle(":x: Not Verified")
                 .setDescription(
                     `You must verify first. Head over to ${channelMention(
-                        Config.verify.channel_name
+                        Config.verify.channel_id
                     )} to verify!`
                 ),
         ],
@@ -158,7 +157,7 @@ export const InTeamChannelResponse = (
             ResponseEmbed()
                 .setTitle("Wrong Channel")
                 .setDescription(
-                    `You cannot use this command in your team text channel, ${ChannelLink(
+                    `You cannot use this command in your team text channel, ${channelMention(
                         textChannelID
                     )}.`
                 ),
@@ -176,7 +175,7 @@ export const NotInTeamChannelResponse = (
             ResponseEmbed()
                 .setTitle("Wrong Channel")
                 .setDescription(
-                    `You can only use this command in your team text channel, ${ChannelLink(
+                    `You can only use this command in your team text channel, ${channelMention(
                         textChannelID
                     )}.`
                 ),
@@ -248,10 +247,10 @@ export const ValidateTeamName = (rawName: string): boolean => {
     const discordified = Discordify(rawName);
 
     const length = rawName.length <= Config.teams.max_name_length;
-    const characters = !!rawName.match(/^[a-z0-9\-]+$/);
-    const standardized = !!discordified.match(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)$/);
+    const rawCharset = !!rawName.match(/^[a-z0-9\- ]+$/i);
+    const channelNameSafe = !!discordified.match(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)$/);
 
-    return length && characters && standardized;
+    return length && rawCharset && channelNameSafe;
 };
 
 export const GetUnfilledTeamCategory = async (guild: Guild): Promise<DiscordCategory> => {
@@ -279,7 +278,7 @@ export const HandleLeaveTeam = async (
     user: User,
     team?: Team
 ): Promise<string> => {
-    team ??= (await GethackerTeam(user.id)) ?? undefined;
+    team ??= (await GetHackerTeam(user.id)) ?? undefined;
     if (!team) {
         return "Could not find user's team";
     }
@@ -345,6 +344,36 @@ const HandleMemberLeave = async (
     });
 
     return error;
+};
+
+export const HandleMemberJoin = async (guild: Guild, team: Team, userId: string) => {
+    const [text, voice] = await Promise.all([
+        (await guild.channels.fetch(team.textChannelId)) as TextChannel | null,
+        (await guild.channels.fetch(team.voiceChannelId)) as VoiceChannel | null,
+    ]);
+
+    await Promise.all([
+        text!.permissionOverwrites.edit(userId, TEAM_MEMBER_PERMS),
+        voice!.permissionOverwrites.edit(userId, TEAM_MEMBER_PERMS),
+    ]);
+
+    await text!.send(
+        SuccessMessage({
+            title: "Members++",
+            message: `${userMention(userId)} has joined the team!`,
+        })
+    );
+};
+
+export const HandleMemberDecline = async (guild: Guild, team: Team, userId: string) => {
+    const text = (await guild.channels.fetch(team.textChannelId)) as TextChannel | null;
+    await text!.send(
+        ErrorMessage({
+            emote: ":slight_frown:",
+            title: "Invite Declined",
+            message: `${userMention(userId)} declined to join your team.`,
+        })
+    );
 };
 
 export const Discordify = (raw: string): string => {

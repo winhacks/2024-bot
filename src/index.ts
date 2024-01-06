@@ -5,7 +5,6 @@ import {RegisterCommands} from "./helpers/commandManager";
 import {logger} from "./logger";
 import {readdir} from "fs/promises";
 import {AuthenticateGoogleAPI} from "./helpers/sheetsAPI";
-import {AuthenticateMongo} from "./helpers/database";
 import path from "path";
 
 let client: ClientType;
@@ -33,7 +32,6 @@ const start = async (): Promise<void> => {
     client.commands = new Collection<string, CommandType>();
 
     await AuthenticateGoogleAPI().then(() => logger.info("Google: OK"));
-    await AuthenticateMongo().then(() => logger.info("MongoDB: OK"));
 
     /*
      * Command loading
@@ -43,11 +41,14 @@ const start = async (): Promise<void> => {
         .filter((file) => file.endsWith(".ts") || file.endsWith(".js"))
         .map((name) => name.slice(0, -path.extname(name).length))
         .filter((name) => name !== "index")
-        .map((name) => require(path.resolve(commandDir, name)) as {command: CommandType});
+        .map((name) => path.resolve(commandDir, name));
 
     logger.info(`Loading ${commandModules.length} commands...`);
+
     const commandsToRegister = [];
-    for (const {command} of commandModules) {
+    for (const path of commandModules) {
+        logger.debug(`Loading ${path} as Command`);
+        const {command} = require(path) as {command: CommandType};
         client.commands.set(command.data.name, command);
         commandsToRegister.push(command);
     }

@@ -18,7 +18,6 @@ export const LeaveTeam = async (intr: CommandInteraction<CacheType>, team: Team)
             intr,
             SuccessMessage({
                 message: `You left Team ${team.displayName} successfully.`,
-                ephemeral: true,
             })
         );
     }

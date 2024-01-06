@@ -3,6 +3,10 @@ import {Discordify} from "../commands/team/team-shared";
 
 const prisma = new PrismaClient();
 
+export const DisconnectDatabase = async () => {
+    await prisma.$disconnect();
+};
+
 export const GetStandardizedTeamName = (displayName: string): string => {
     return Discordify(displayName).toLowerCase();
 };
@@ -25,19 +29,25 @@ export const GetHackerCount = async (
     return await prisma.hacker.count({where: {verified: true}});
 };
 
-export const CreateHacker = async (
+export const UpsertHacker = async (
     discordId: string,
     firstName: string,
     lastName: string,
     email: string
 ) => {
-    return await prisma.hacker.create({
-        data: {discordId, firstName, lastName, email},
+    return await prisma.hacker.upsert({
+        create: {discordId, firstName, lastName, email},
+        update: {discordId, firstName, lastName, email},
+        where: {discordId},
     });
 };
 
 export const GetHacker = async (discordId: string) => {
-    return await prisma.hacker.findUnique({where: {discordId}});
+    return await prisma.hacker.findUnique({where: {discordId}, include: {team: true}});
+};
+
+export const DeleteHacker = async (discordId: string) => {
+    return await prisma.hacker.delete({where: {discordId}});
 };
 
 export const IsHackerVerified = async (discordId: string): Promise<boolean> => {
@@ -46,7 +56,9 @@ export const IsHackerVerified = async (discordId: string): Promise<boolean> => {
 };
 
 export const IsEmailVerified = async (email: string): Promise<boolean> => {
-    const hackerUsingEmail = await prisma.hacker.findFirst({where: {email}});
+    const hackerUsingEmail = await prisma.hacker.findFirst({
+        where: {email: email, verified: true},
+    });
     return hackerUsingEmail !== null;
 };
 
@@ -82,6 +94,13 @@ export const DeleteTeam = async (standardName: string) => {
     }
 };
 
+export const AddHackerToTeam = async (teamStdName: string, discordId: string) => {
+    return await prisma.hacker.update({
+        where: {discordId},
+        data: {teamStdName},
+    });
+};
+
 export const RemoveHackerFromTeam = async (discordId: string) => {
     try {
         return await prisma.hacker.update({
@@ -107,8 +126,25 @@ export const UpsertInvite = async (inviteeId: string, teamStdName: string) => {
     }
 };
 
-export const GethackerInvites = async (discordId: string) => {
+export const DeleteInvite = async (inviteeId: string, teamStdName: string) => {
+    return await prisma.invite.delete({
+        where: {inviteeId_teamStdName: {inviteeId, teamStdName}},
+    });
+};
+
+export const GetHackerInvites = async (discordId: string) => {
     return await prisma.invite.findMany({where: {inviteeId: discordId}});
+};
+
+export const GetInvite = async (inviteeId: string, teamStdName: string) => {
+    return await prisma.invite.findUnique({
+        where: {
+            inviteeId_teamStdName: {inviteeId, teamStdName},
+        },
+        include: {
+            Team: true,
+        },
+    });
 };
 
 /**
@@ -118,7 +154,7 @@ export const GethackerInvites = async (discordId: string) => {
  * @returns the team that the discord user belongs to, or null if
  * they are not in a team.
  */
-export const GethackerTeam = async (discordId: string) => {
+export const GetHackerTeam = async (discordId: string) => {
     const hacker = await GetHacker(discordId);
     if (!hacker?.teamStdName) {
         return null;
@@ -162,13 +198,22 @@ export const GetAllCategories = async () => {
  * return `false` or throw an error to abort the transaction. If the function
  * completes returning `true`, the transaction is committed.
  * @param callback the function to run
+ * @returns whether or not the transaction completed
  */
-export const WithTransaction = (callback: () => Promise<boolean>) => {
-    return prisma.$transaction(async (tx) => {
-        const result = await callback();
-        if (!result) {
-            const up = Error("aborting transaction");
-            throw up;
+export const WithTransaction = async (callback: () => Promise<boolean>) => {
+    let result: boolean = true;
+
+    await prisma.$transaction(async (tx) => {
+        try {
+            result = await callback();
+            if (!result) {
+                throw Error("Aborting transaction");
+            }
+        } catch (e) {
+            result = false;
+            throw e;
         }
     });
+
+    return result;
 };

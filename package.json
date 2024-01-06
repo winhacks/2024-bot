@@ -10,8 +10,13 @@
     "scripts": {
         "dev": "ts-node ./src/index.ts",
         "dev-pretty": "ts-node ./src/index.ts | pino-pretty",
-        "build": "tsc -outdir ./build",
-        "host": "node ./build/index.js"
+        "build": "yarn prisma:generate && tsc -outdir ./build",
+        "host": "node ./build/index.js",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate deploy",
+        "docker:host": "docker compose up -d",
+        "docker:stop": "docker compose down",
+        "docker:update": "yarn docker:stop && docker-compose up -d --build"
     },
     "prettier": {
         "tabWidth": 4,
@@ -39,7 +44,7 @@
         "@discordjs/rest": "^0.2.0-canary.0",
         "@prisma/client": "^5.7.1",
         "@types/node": "^17.0.8",
-        "discord.js": "^13.5.0",
+        "discord.js": "=13.5.0",
         "googleapis": "^92.0.0",
         "json5": "^2.2.0",
         "pino": "^7.6.2",

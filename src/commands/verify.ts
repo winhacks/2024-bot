@@ -12,7 +12,12 @@ import {GiveUserRole, RenameUser, TakeUserRole} from "../helpers/userManagement"
 import {logger} from "../logger";
 import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
-import {CreateHacker, GetHacker, IsEmailVerified} from "../helpers/database";
+import {
+    UpsertHacker,
+    GetHacker,
+    IsEmailVerified,
+    SetHackerVerified,
+} from "../helpers/database";
 
 // source: https://www.emailregex.com/ (apparently 99.99% accurate)
 const emailRegex =
@@ -57,7 +62,24 @@ const verifyModule: CommandType = {
          *    user's data.
          */
 
-        if ((await GetHacker(intr.user.id))?.verified) {
+        const existingHacker = await GetHacker(intr.user.id);
+        if (existingHacker?.verified) {
+            // if they appear to be changing their email, we can provide them with some help :)
+            if (existingHacker.email !== email) {
+                return SafeReply(
+                    intr,
+                    ErrorMessage({
+                        emote: ":confused:",
+                        title: "Already Verified With Other Email",
+                        message: [
+                            "You already verified with another email address. If you want",
+                            "to change your email, use `/unverify` first, then `/verify` again",
+                            "with the new email.",
+                        ].join(" "),
+                    })
+                );
+            }
+
             return SafeReply(
                 intr,
                 ErrorMessage({
@@ -134,19 +156,20 @@ const verifyModule: CommandType = {
         }
 
         // insert user into database
-        const user = await CreateHacker(
+        const user = await UpsertHacker(
             member.user.id,
             userData.firstName,
             userData.lastName,
             userData.email
         );
+        await SetHackerVerified(member.user.id, true);
 
         if (!user) {
             return SafeReply(intr, ErrorMessage());
         }
 
-        const isGuildOwner = member.id !== guild!.ownerId;
-        if (isGuildOwner) {
+        const isGuildOwner = member.id === guild!.ownerId;
+        if (!isGuildOwner) {
             await RenameUser(member, nickname);
         }
 
@@ -174,3 +197,5 @@ const verifyModule: CommandType = {
         }
     },
 };
+
+export {verifyModule as command};

@@ -9,15 +9,13 @@ CREATE TABLE "Team" (
 );
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "Hacker" (
     "discordId" TEXT NOT NULL PRIMARY KEY,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "teamStdName" TEXT,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "verifiedAt" DATETIME,
-    CONSTRAINT "User_teamStdName_fkey" FOREIGN KEY ("teamStdName") REFERENCES "Team" ("stdName") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "Hacker_teamStdName_fkey" FOREIGN KEY ("teamStdName") REFERENCES "Team" ("stdName") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -26,7 +24,7 @@ CREATE TABLE "Invite" (
     "teamStdName" TEXT NOT NULL,
 
     PRIMARY KEY ("inviteeId", "teamStdName"),
-    CONSTRAINT "Invite_inviteeId_fkey" FOREIGN KEY ("inviteeId") REFERENCES "User" ("discordId") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Invite_inviteeId_fkey" FOREIGN KEY ("inviteeId") REFERENCES "Hacker" ("discordId") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Invite_teamStdName_fkey" FOREIGN KEY ("teamStdName") REFERENCES "Team" ("stdName") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -39,10 +37,10 @@ CREATE TABLE "DiscordCategory" (
 CREATE UNIQUE INDEX "Team_stdName_key" ON "Team"("stdName");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_discordId_key" ON "User"("discordId");
+CREATE UNIQUE INDEX "Hacker_discordId_key" ON "Hacker"("discordId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "Hacker_email_key" ON "Hacker"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Invite_inviteeId_teamStdName_key" ON "Invite"("inviteeId", "teamStdName");

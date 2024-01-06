@@ -7,7 +7,7 @@ const readyEventModule: EventType = {
     eventName: "ready",
     once: true,
     execute: async (client: ClientType) => {
-        const registeredCount = await GetHackerCount(false);
+        const registeredCount = await GetHackerCount();
         const message = SelectPlural(
             registeredCount,
             "nobody 😦",

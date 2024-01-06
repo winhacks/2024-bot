@@ -3,7 +3,7 @@ import {
     SlashCommandBuilder,
     SlashCommandStringOption,
 } from "@discordjs/builders";
-import {CacheType, CommandInteraction, Guild, GuildMember} from "discord.js";
+import {CacheType, CommandInteraction, GuildMember} from "discord.js";
 import {Config} from "../config";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
@@ -12,12 +12,7 @@ import {GiveUserRole, RenameUser, TakeUserRole} from "../helpers/userManagement"
 import {logger} from "../logger";
 import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
-import {
-    UpsertHacker,
-    GetHacker,
-    IsEmailVerified,
-    SetHackerVerified,
-} from "../helpers/database";
+import {UpsertHacker, GetHacker, IsEmailVerified} from "../helpers/database";
 
 // source: https://www.emailregex.com/ (apparently 99.99% accurate)
 const emailRegex =
@@ -63,7 +58,7 @@ const verifyModule: CommandType = {
          */
 
         const existingHacker = await GetHacker(intr.user.id);
-        if (existingHacker?.verified) {
+        if (existingHacker) {
             // if they appear to be changing their email, we can provide them with some help :)
             if (existingHacker.email !== email) {
                 return SafeReply(
@@ -162,7 +157,6 @@ const verifyModule: CommandType = {
             userData.lastName,
             userData.email
         );
-        await SetHackerVerified(member.user.id, true);
 
         if (!user) {
             return SafeReply(intr, ErrorMessage());

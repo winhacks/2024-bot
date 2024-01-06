@@ -19,14 +19,8 @@ export const GetStandardizedTeamName = (displayName: string): string => {
  * @param includeUnverified whether or not to include unverified hackers.
  * @returns the number of hackers, optionally including unverified ones.
  */
-export const GetHackerCount = async (
-    includeUnverified: boolean = false
-): Promise<number> => {
-    if (includeUnverified) {
-        return await prisma.hacker.count();
-    }
-
-    return await prisma.hacker.count({where: {verified: true}});
+export const GetHackerCount = async (): Promise<number> => {
+    return await prisma.hacker.count();
 };
 
 export const UpsertHacker = async (
@@ -50,14 +44,9 @@ export const DeleteHacker = async (discordId: string) => {
     return await prisma.hacker.delete({where: {discordId}});
 };
 
-export const IsHackerVerified = async (discordId: string): Promise<boolean> => {
-    const hacker = await GetHacker(discordId);
-    return hacker?.verified ?? false;
-};
-
 export const IsEmailVerified = async (email: string): Promise<boolean> => {
     const hackerUsingEmail = await prisma.hacker.findFirst({
-        where: {email: email, verified: true},
+        where: {email: email},
     });
     return hackerUsingEmail !== null;
 };
@@ -161,20 +150,6 @@ export const GetHackerTeam = async (discordId: string) => {
     }
 
     return await GetTeam(hacker.teamStdName);
-};
-
-export const SetHackerVerified = async (discordId: string, verified: boolean) => {
-    if (verified) {
-        return await prisma.hacker.update({
-            where: {discordId},
-            data: {verified: true, verifiedAt: new Date()},
-        });
-    } else {
-        return await prisma.hacker.update({
-            where: {discordId},
-            data: {verified: false},
-        });
-    }
 };
 
 export const CreateCategory = async (id: string) => {

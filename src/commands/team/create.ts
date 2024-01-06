@@ -54,10 +54,10 @@ export const CreateTeamSubcommand = async (
         return SafeReply(intr, NameTakenResponse());
     }
 
-    const user = await GetHacker(intr.user.id);
-    if (!user?.verified) {
+    const hacker = await GetHacker(intr.user.id);
+    if (!hacker) {
         return SafeReply(intr, NotVerifiedResponse());
-    } else if (user!.teamStdName != null) {
+    } else if (hacker!.teamStdName != null) {
         return SafeReply(intr, AlreadyInTeamResponse());
     }
 

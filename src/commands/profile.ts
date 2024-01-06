@@ -11,7 +11,7 @@ const profileModule: CommandType = {
     deferMode: "NO-DEFER",
     execute: async (intr: CommandInteraction<CacheType>) => {
         const hacker = await GetHacker(intr.user.id);
-        const verified = hacker?.verified ? ":white_check_mark:" : ":x:";
+        const verified = hacker ? ":white_check_mark:" : ":x:";
         const teamName = hacker?.team?.displayName ?? "No Team";
 
         const displayName = intr.inGuild()

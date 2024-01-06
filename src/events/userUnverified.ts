@@ -10,7 +10,7 @@ const userUnverifiedModule: EventType = {
         await DeleteHacker(member.id);
 
         // update presence to reflect 1 less verified hacker
-        const registeredCount = await GetHackerCount(false);
+        const registeredCount = await GetHackerCount();
         const message = SelectPlural(
             registeredCount,
             "nobody 😦",

@@ -1,7 +1,7 @@
 import {SlashCommandBuilder} from "@discordjs/builders";
 import {CacheType, CommandInteraction, Guild, GuildMember} from "discord.js";
 import {Config} from "../config";
-import {GetHackerTeam, IsHackerVerified, SetHackerVerified} from "../helpers/database";
+import {DeleteHacker, GetHacker, GetHackerTeam} from "../helpers/database";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
 import {TakeUserRole} from "../helpers/userManagement";
@@ -20,8 +20,8 @@ const unverifyModule: CommandType = {
         }
 
         // check for existing user
-        const isVerified = await IsHackerVerified(intr.user.id);
-        if (!isVerified) {
+        const existingHacker = await GetHacker(intr.user.id);
+        if (!existingHacker) {
             return SafeReply(
                 intr,
                 ErrorMessage({
@@ -74,7 +74,7 @@ const HandleUnverify = async (guild: Guild, member: GuildMember): Promise<void> 
             throw Error(takeUserRoleErr);
         }
 
-        await SetHackerVerified(member.user.id, false);
+        await DeleteHacker(member.user.id);
 
         if (member.user.id !== guild.ownerId) {
             await member.setNickname(null, "User unverified");

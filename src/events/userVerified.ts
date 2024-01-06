@@ -7,7 +7,7 @@ const userVerifiedModule: EventType = {
     eventName: "userVerified",
     once: false,
     execute: async (client: ClientType, member: GuildMember) => {
-        const registeredCount = await GetHackerCount(false);
+        const registeredCount = await GetHackerCount();
         const message = SelectPlural(
             registeredCount,
             "nobody 😦",

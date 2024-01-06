@@ -28,13 +28,7 @@ model Hacker {
     teamStdName String?
     team        Team?   @relation(fields: [teamStdName], references: [stdName])
 
-    // todo: this is redundant now, seeing as we nuke these records when someone unverifies/leaves
-    verified   Boolean   @default(false)
-    verifiedAt DateTime?
-
     invites Invite[]
-
-    @@map("User")
 }
 
 model Invite {

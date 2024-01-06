@@ -8,17 +8,12 @@ import {
     TextChannel,
 } from "discord.js";
 import {Config} from "../../config";
-import {
-    ErrorMessage,
-    ResponseEmbed,
-    SafeDeferReply,
-    SafeReply,
-} from "../../helpers/responses";
+import {ErrorMessage, ResponseEmbed, SafeReply} from "../../helpers/responses";
 import {NotInGuildResponse, TeamFullResponse} from "./team-shared";
 import {MessageButtonStyles} from "discord.js/typings/enums";
 import {hyperlink, userMention} from "@discordjs/builders";
 import {Team} from "@prisma/client";
-import {UpsertInvite, GetMembersOfTeam, IsHackerVerified} from "../../helpers/database";
+import {UpsertInvite, GetMembersOfTeam, GetHacker} from "../../helpers/database";
 import {BuildInviteButtonId, InviteAction} from "../../events/buttons/invite";
 
 export const InviteToTeam = async (
@@ -60,8 +55,8 @@ export const InviteToTeam = async (
      * 3. The invitee must not have already been invited.
      */
 
-    const inviteeVerified = await IsHackerVerified(invitee.id);
-    if (!inviteeVerified) {
+    const inviteeHacker = await GetHacker(invitee.id);
+    if (!inviteeHacker) {
         return SafeReply(
             intr,
             ErrorMessage({

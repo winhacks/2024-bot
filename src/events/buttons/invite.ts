@@ -7,9 +7,9 @@ import {ButtonAction} from "../../types";
 import {
     AddHackerToTeam,
     DeleteInvite,
+    GetHacker,
     GetHackerTeam,
     GetInvite,
-    IsHackerVerified,
     WithTransaction,
 } from "../../helpers/database";
 import {Invite, Team} from "@prisma/client";
@@ -34,7 +34,8 @@ export const ParseInviteButtonId = (buttonId: string) => {
 
 const inviteAction: ButtonAction = {
     execute: async (intr: ButtonInteraction<CacheType>) => {
-        if (!IsHackerVerified(intr.user.id)) {
+        const existingHacker = await GetHacker(intr.user.id);
+        if (!existingHacker) {
             const joinLink = hyperlink(
                 `${Config.bot_info.event_name} Discord server`,
                 "https://discord.com/invite/xUV9yBqjH4"

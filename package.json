@@ -14,6 +14,7 @@
         "host": "node ./build/index.js",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate deploy",
+        "prisma:create-migration": "prisma migrate dev",
         "docker:host": "docker compose up -d",
         "docker:stop": "docker compose down",
         "docker:update": "yarn docker:stop && docker-compose up -d --build"

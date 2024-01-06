@@ -1,6 +1,6 @@
-# WinHacks 2022 Discord Bot
+# WinHacks 2024 Discord Bot
 
-Bot for WinHacks 2022, written in Typescript with Discord.JS. Uses a SQLite database to store team information and the Google Sheets API to verify users based on the results of an application form.
+Bot for WinHacks 2024, written in Typescript with Discord.JS. Uses a SQLite database to store team information and the Google Sheets API to verify users based on the results of an application form.
 
 ## Configuration
 

@@ -1,20 +1,20 @@
-# WinHacks 2022 Discord Bot
+# WinHacks 2024 Discord Bot
 
-Bot for WinHacks 2022, written in Typescript with Discord.JS. Uses a MongoDB database to store team information and the Google Sheets API to verify users using a spreadsheet.
+Bot for WinHacks 2024, written in Typescript with Discord.JS. Uses a SQLite database to store team information and the Google Sheets API to verify users based on the results of an application form.
 
 ## Configuration
 
-To start, copy `config.json.example` to `config.json`.
+To start, copy `config.json5.example` to `config.json5`.
 
 ```bash
 # Mac/Linux:
-cp config.json.example config.json
+cp config.json5.example config.json5
 
 # Windows:
-copy config.json.example config.json
+copy config.json5.example config.json5
 ```
 
-**Reminder:** do not under _any_ circumstances commit the `config.json` file to version control. It more than likely contains secret information that you _really_ should keep secret.
+**Reminder:** do not under _any_ circumstances commit the `config.json5` file to version control. It more than likely contains secret information that you _really_ should keep secret.
 
 ### Discord API Configuration
 
@@ -44,16 +44,6 @@ Helpful links:
 -   [Creating a Service Account & Keys](https://developers.google.com/workspace/guides/create-credentials#service-account)
 -   [Google Sheets API Scopes](https://developers.google.com/identity/protocols/oauth2/scopes#sheets)
 
-### MongoDB Configuration
-
-To configure the bot to work with MongoDB, you will need a MongoDB database. [MongoDB Atlas](https://www.mongodb.com/atlas) is a good, free choice for small scale uses.
-
-Once you have a database, you need to add its details to the config. Most of the following information can be obtained from the MongoDB Atlas dashboard, if you're using Atlas.
-
--   `database_url`: the URL to connect to your MongoDB server with. On the dashboard for the database you wish to use, click "Connect". Choose "Connect your Application", then "Node.JS", "4.0 or Later", and "X.509". The URL is in the box below.
--   `certificate`: the PEM certificate to connect with. On the dashboard, click "Database Access". Select "Add New Database User". Change the Authentication Method to "Certificate". Enter a common name and turn on "Download certificate when user is added". Select an expiration date and finish filling out the form. The certificate will need access to the database named in `teams.database_name`. Finally, copy the certificate into the config file. Replace the newlines with `\n` in the config string. Make sure you include the `BEGIN CERTIFICATE` and `END CERTIFICATE` lines.
--   `private_key`: This is the second half of the certificate you downloaded above. Once again, replace newlines with `\n` and include `BEGIN PRIVATE KEY` and `END PRIVATE KEY`.
-
 ### Command Specific Configuration
 
 #### Bot Info
@@ -70,13 +60,14 @@ Once you have a database, you need to add its details to the config. Most of the
 -   `registration_url`: the URL to register for the event.
 -   `target_sheet_id`: the ID of the spreadsheet to use for verification. It will need to be shared with the service worker account. You can find the ID in the sheet URL: `https://docs.google.com/spreadsheets/d/**SHEET_ID_HERE**/edit`.
 -   `target_sheet`: the name of the sheet to use for verification data.
+-   `first_name_column`: the column in the `target_sheet` that contains a user's first name. Must be a single letter.
+-   `last_name_column`: the column in the `target_sheet` that contains a user's last name. Must be a single letter.
 -   `email_column`: the column in the `target_sheet` that contains emails to verify users against. Must be a single letter.
 -   `verified_role_name`: the display name of the role to give verified users.
--   `channel_name`: the name of the channel which is used for verification. **Users are not restricted to using the command in this channel, but rather linked to it when they use `/apply`**.
+-   `channel_id`: the id of the channel which is used for verification. **Users are not restricted to using the command in this channel, but rather linked to it when they use `/apply`**.
 
 #### Teams
 
--   `database_name`: the name of your MongoDB database
 -   `max_name_length`: the number of characters which is considered too long fora team name. Discord limits this to 100.
 -   `max_team_size`: the maximum number of members in a team.
 -   `teams_per_category`: the number of teams that can be in one channel category. Each team has 2 channels, and Discord doesn't allow more than 50 channels per category, so this should be no more than 25.
@@ -91,29 +82,4 @@ The socials item is an array of key-value pairs (`displayName: link`) that tells
 
 Now that you've configured everything, you need to start it up. We use Docker to make that very simple.
 
-Building and running is as simple as
-
-```sh
-docker build -t yourAwesomeBot .
-
-docker run yourAwesomeBot
-```
-
-## Known Issues
-
-This section lists any known issues with the bot that I have decided not to fix for the time being. Usually, these are events that I consider "unlikely".
-
-## Team Operations - Transaction Fighting (Medium Priority)
-
-### Issue Description
-
-`WithTransaction` asks the MongoDB server for a session (a transaction). If another session is requested, an error is thrown which may crash the bot.
-
-### Example Scenario
-
-User A invites User B and User C to their team. Both Users receive the invite in their DM and promptly respond to it. User B selects "accept" (first transaction). Moments after, while the system is still processing User B's request, User C selects "accept" (second transaction). There is now a second session being requested which is not allowed.
-
-### Proposed Solution(s)
-
--   An event queue preventing two `WithTransaction` calls from requesting a session while the other is still using its session.
--   Rewriting some scenarios that currently utilize `WithTransaction` to use messier but transaction-free code.
+For hosting, its as simple as `yarn docker:host`. Similarly, for development, is as simple as `yarn dev`. You can also install `pino-pretty` with `yarn global add pino-pretty` and use `yarn dev-pretty` for nicer looking logs.

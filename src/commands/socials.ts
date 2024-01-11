@@ -5,8 +5,6 @@ import {ErrorMessage, ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
 
-// FINISHED
-
 const socialsModule: CommandType = {
     data: new SlashCommandBuilder() //
         .setName("socials")

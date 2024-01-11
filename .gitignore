@@ -8,6 +8,10 @@ config.json5
 # builds
 build/
 
+# database
+prisma/database.db
+data/
+
 # Logs
 logs
 *.log

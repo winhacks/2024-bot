@@ -1,30 +1,27 @@
 import {
     Guild,
-    GuildChannel,
     GuildTextBasedChannel,
     OverwriteResolvable,
     PermissionOverwriteOptions,
-    PermissionOverwrites,
     Permissions,
     TextChannel,
     User,
     VoiceChannel,
 } from "discord.js";
-import {ChannelTypes, OverwriteTypes} from "discord.js/typings/enums";
+import {ChannelTypes} from "discord.js/typings/enums";
 import {Config} from "../../config";
 import {
-    categoryCollection,
-    FindAndRemove,
-    FindAndUpdate,
-    FindOne,
-    GetClient,
-    teamCollection,
+    RemoveHackerFromTeam,
+    GetMembersOfTeam,
     WithTransaction,
+    CreateCategory,
+    GetAllCategories,
+    GetHackerTeam,
 } from "../../helpers/database";
-import {ChannelLink} from "../../helpers/misc";
-import {ResponseEmbed, SuccessMessage} from "../../helpers/responses";
+import {ErrorMessage, ResponseEmbed, SuccessMessage} from "../../helpers/responses";
 import {logger} from "../../logger";
-import {CategoryType, Query, TeamAvailability, TeamType} from "../../types";
+import {channelMention, userMention} from "@discordjs/builders";
+import {DiscordCategory, Team} from "@prisma/client";
 
 // PERMISSIONS ----------------------------------------------------------------
 
@@ -50,18 +47,30 @@ const FLAG_SET = [
 
 // RESPONSES ------------------------------------------------------------------
 
+export const NotVerifiedResponse = (ephemeral: boolean = false) => {
+    return {
+        ephemeral: true,
+        embeds: [
+            ResponseEmbed()
+                .setTitle(":x: Not Verified")
+                .setDescription(
+                    `You must verify first. Head over to ${channelMention(
+                        Config.verify.channel_id
+                    )} to verify!`
+                ),
+        ],
+    };
+};
+
 export const InvalidNameResponse = (ephemeral: boolean = false) => {
     return {
         ephemeral: ephemeral,
         embeds: [
-            ResponseEmbed()
-                .setTitle(":x: Invalid Team Name")
-                .setDescription(
-                    `Team names must be shorter than ${
-                        Config.teams.max_name_length
-                    } characters, ${"\
-                    "}consist only of spaces and English alphanumeric characters, and not already be taken.`
-                ),
+            ResponseEmbed().setTitle(":x: Invalid Team Name").setDescription(
+                `Team names must be shorter than ${
+                    Config.teams.max_name_length //
+                } characters, consist only of spaces and English alphanumeric characters, and not already be taken.`
+            ),
         ],
     };
 };
@@ -148,7 +157,7 @@ export const InTeamChannelResponse = (
             ResponseEmbed()
                 .setTitle("Wrong Channel")
                 .setDescription(
-                    `You cannot use this command in your team text channel, ${ChannelLink(
+                    `You cannot use this command in your team text channel, ${channelMention(
                         textChannelID
                     )}.`
                 ),
@@ -166,30 +175,12 @@ export const NotInTeamChannelResponse = (
             ResponseEmbed()
                 .setTitle("Wrong Channel")
                 .setDescription(
-                    `You can only use this command in your team text channel, ${ChannelLink(
+                    `You can only use this command in your team text channel, ${channelMention(
                         textChannelID
                     )}.`
                 ),
         ],
     };
-};
-
-// UTILITIES ------------------------------------------------------------------
-
-export const MakeTeam = (
-    teamName: string,
-    text: string,
-    voice: string,
-    member: string
-): TeamType => {
-    return {
-        name: teamName,
-        stdName: Discordify(teamName),
-        members: [member],
-        textChannel: text,
-        voiceChannel: voice,
-        invites: [],
-    } as TeamType;
 };
 
 // FIXME: once magic is no longer needed, this should be removed and downgraded to a single member use case
@@ -234,28 +225,19 @@ export const MakeTeamChannels = async (
     forMember: string
 ): Promise<[TextChannel, VoiceChannel] | null> => {
     const category = await GetUnfilledTeamCategory(guild);
-    const updateRes = await FindAndUpdate<CategoryType>(
-        categoryCollection,
-        category,
-        {$inc: {teamCount: 1}},
-        {upsert: true}
-    );
-    if (!updateRes) {
-        logger.warn("Failed to update category!");
-        return null;
-    }
 
     const overwrites = MakeTeamPermissions(guild, teamName, [forMember]);
+    const channelName = Discordify(teamName);
     return Promise.all([
-        guild.channels.create(teamName, {
+        guild.channels.create(channelName, {
             type: ChannelTypes.GUILD_TEXT,
-            parent: category.categoryID,
+            parent: category.categoryId,
             permissionOverwrites: overwrites,
         }),
 
-        guild.channels.create(teamName + "-voice", {
+        guild.channels.create(channelName + "-voice", {
             type: ChannelTypes.GUILD_VOICE,
-            parent: category.categoryID,
+            parent: category.categoryId,
             permissionOverwrites: overwrites,
         }),
     ]);
@@ -265,62 +247,40 @@ export const ValidateTeamName = (rawName: string): boolean => {
     const discordified = Discordify(rawName);
 
     const length = rawName.length <= Config.teams.max_name_length;
-    const characters = !!rawName.match(/^[a-z0-9\-]+$/);
-    const standardized = !!discordified.match(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)$/);
+    const rawCharset = !!rawName.match(/^[a-z0-9\- ]+$/i);
+    const channelNameSafe = !!discordified.match(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)$/);
 
-    return length && characters && standardized;
+    return length && rawCharset && channelNameSafe;
 };
 
-export const GetTeamAvailability = async (
-    teamName: string,
-    member: string
-): Promise<TeamAvailability> => {
-    const query: Query<TeamType> = {$or: [{name: teamName}, {members: member}]};
-    const result = await FindOne<TeamType>(teamCollection, query);
-
-    if (result?.name === teamName) {
-        return TeamAvailability.NAME_EXISTS;
-    } else if (result?.members.includes(member)) {
-        return TeamAvailability.ALREADY_IN_TEAM;
-    } else {
-        return TeamAvailability.AVAILABLE;
-    }
-};
-
-export const GetUnfilledTeamCategory = async (guild: Guild): Promise<CategoryType> => {
-    const db = await GetClient<CategoryType>(categoryCollection);
-
-    // query DB for an unfilled category
-    const dbResult = await FindOne<CategoryType>(categoryCollection, UnfilledCategory());
-    if (dbResult) {
-        return dbResult;
-    }
-
-    // create a new one and insert into the database
-    const catCount = await db.estimatedDocumentCount();
-    const newCat = await guild.channels.create(
-        `${Config.teams.category_base_name} ${catCount + 1}`,
-        {type: ChannelTypes.GUILD_CATEGORY}
+export const GetUnfilledTeamCategory = async (guild: Guild): Promise<DiscordCategory> => {
+    const discordCategories = await GetAllCategories();
+    const openCategories = discordCategories.filter(
+        (cat) => cat._count.teams < Config.teams.teams_per_category
     );
+    if (openCategories.length > 0) {
+        return openCategories[0];
+    }
 
-    const inserted: CategoryType = {categoryID: newCat.id, teamCount: 0};
-    db.insertOne(inserted);
+    // no free category, need to create
+    const categoryCount = discordCategories.length;
+    const newCategoryName = `${Config.teams.category_base_name} ${categoryCount + 1}`;
+    const newCategory = await guild.channels.create(newCategoryName, {
+        type: ChannelTypes.GUILD_CATEGORY,
+    });
 
-    return inserted;
+    // insert new category group in database
+    return await CreateCategory(newCategory.id);
 };
 
 export const HandleLeaveTeam = async (
     guild: Guild,
     user: User,
-    team?: TeamType
+    team?: Team
 ): Promise<string> => {
+    team ??= (await GetHackerTeam(user.id)) ?? undefined;
     if (!team) {
-        const found = await FindOne<TeamType>(teamCollection, {members: user});
-        if (!found) {
-            return "Could not find user's team";
-        }
-
-        team = found;
+        return "Could not find user's team";
     }
 
     return HandleMemberLeave(guild, user, team);
@@ -329,31 +289,45 @@ export const HandleLeaveTeam = async (
 const HandleMemberLeave = async (
     guild: Guild,
     user: User,
-    team: TeamType
+    team: Team
 ): Promise<string> => {
-    return WithTransaction(
-        async (session) => {
-            // remove member
-            const updated = await FindAndUpdate(
-                teamCollection,
-                {stdName: team.stdName},
-                {$pull: {members: user.id}},
-                {session}
-            );
-            if (!updated) {
-                return "Couldn't remove member from team in database";
-            }
+    let error: string = "";
 
-            // resolve channels
-            let text = (await guild!.channels.fetch(team.textChannel)) as GuildChannel;
-            let voice = (await guild!.channels.fetch(team.voiceChannel)) as GuildChannel;
-            if (!text || !voice) {
-                return "Failed to get team channels";
-            }
+    await WithTransaction(async () => {
+        /**
+         * When a member leaves a team, we need to:
+         * 1. Unlink the member from the team
+         * 2. Remove the member's permissions to view the team channels
+         * 3. Check if the team has become empty or not. If it has, the message
+         *    indicating someone left should also indicate the team is now abandoned.
+         */
 
-            const extra =
-                team.members.length === 1 ? "**This team is now abandoned.**" : "";
+        if ((await RemoveHackerFromTeam(user.id)) === null) {
+            error = "Couldn't remove member from their team in the database";
+            return false;
+        }
 
+        // Resolve team channels
+        let text = await guild!.channels.fetch(team.textChannelId);
+        let voice = await guild!.channels.fetch(team.voiceChannelId);
+        if (!text || !voice) {
+            error = "Failed to get team channels";
+            return false;
+        }
+
+        try {
+            // revoke user permissions
+            text.permissionOverwrites.delete(user.id, "Member left team");
+            voice.permissionOverwrites.delete(user.id, "Member left team");
+        } catch {
+            error = "Failed to revoke permissions";
+            return false;
+        }
+
+        const teamMembers = await GetMembersOfTeam(team.stdName);
+        const extra = teamMembers.length <= 0 ? "**This team is now abandoned.**" : "";
+
+        try {
             // send leave message
             await (text as GuildTextBasedChannel).send(
                 SuccessMessage({
@@ -362,28 +336,46 @@ const HandleMemberLeave = async (
                     message: `${user} has left the team. ${extra}`,
                 })
             );
-
-            try {
-                text.permissionOverwrites.delete(user.id, "Member left team");
-                voice.permissionOverwrites.delete(user.id, "Member left team");
-            } catch (err) {
-                return `${err}`;
-            }
-
-            return "";
-        },
-        async (err) => {
-            logger.error(err);
+        } catch (err) {
+            error = `${err}`;
         }
+
+        return true;
+    });
+
+    return error;
+};
+
+export const HandleMemberJoin = async (guild: Guild, team: Team, userId: string) => {
+    const [text, voice] = await Promise.all([
+        (await guild.channels.fetch(team.textChannelId)) as TextChannel | null,
+        (await guild.channels.fetch(team.voiceChannelId)) as VoiceChannel | null,
+    ]);
+
+    await Promise.all([
+        text!.permissionOverwrites.edit(userId, TEAM_MEMBER_PERMS),
+        voice!.permissionOverwrites.edit(userId, TEAM_MEMBER_PERMS),
+    ]);
+
+    await text!.send(
+        SuccessMessage({
+            title: "Members++",
+            message: `${userMention(userId)} has joined the team!`,
+        })
+    );
+};
+
+export const HandleMemberDecline = async (guild: Guild, team: Team, userId: string) => {
+    const text = (await guild.channels.fetch(team.textChannelId)) as TextChannel | null;
+    await text!.send(
+        ErrorMessage({
+            emote: ":slight_frown:",
+            title: "Invite Declined",
+            message: `${userMention(userId)} declined to join your team.`,
+        })
     );
 };
 
 export const Discordify = (raw: string): string => {
     return raw.replaceAll(" ", "-").toLowerCase();
-};
-
-// DATABASE QUERIES -----------------------------------------------------------
-
-export const UnfilledCategory = (): Query<CategoryType> => {
-    return {teamCount: {$lt: Config.teams.teams_per_category}};
 };

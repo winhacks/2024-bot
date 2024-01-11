@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:20
 
 WORKDIR /app
 
@@ -8,12 +8,13 @@ COPY ./yarn.lock yarn.lock
 RUN yarn install
 
 # Build layer
-COPY ./src src
 COPY ./tsconfig.json tsconfig.json
+COPY ./src src
+COPY ./prisma prisma
 RUN yarn build
 
 # Config layer
 COPY ./config.json5 config.json5
 
 # Execution layer
-CMD yarn host
+CMD yarn prisma:migrate && yarn host

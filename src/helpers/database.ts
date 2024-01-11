@@ -1,194 +1,194 @@
-import {Collection} from "discord.js";
-import {
-    MongoClient,
-    Collection as MongoCollection,
-    Document,
-    UpdateFilter,
-    ClientSession,
-    OptionalUnlessRequiredId,
-} from "mongodb";
-import {Config} from "../config";
-import {logger} from "../logger";
-import {Query} from "../types";
+import {PrismaClient} from "@prisma/client";
+import {Discordify} from "../commands/team/team-shared";
 
-let mongoClient: MongoClient;
-const collectionCache = new Collection<string, MongoCollection<any>>();
+const prisma = new PrismaClient();
 
-export const teamCollection = "teams";
-export const categoryCollection = "team_categories";
-export const verifiedCollection = "users";
-export const inviteCollection = "invites";
-
-// HACK: Create actual schema type instead of using MongoDB's base Document type
-
-export const AuthenticateMongo = async () => {
-    mongoClient = new MongoClient(Config.mongo_db.database_url, {
-        cert: Config.mongo_db.certificate,
-        key: Config.mongo_db.private_key,
-    });
-
-    await mongoClient.connect();
-    process.addListener("beforeExit", () => {
-        mongoClient.close();
-    });
+export const DisconnectDatabase = async () => {
+    await prisma.$disconnect();
 };
 
-export const GetClient = async <T>(name: string) => {
-    if (Config.dev_mode) {
-        name += "_development";
-    }
-
-    // try cache
-    const cached = collectionCache.get(name);
-    if (cached) {
-        return cached as MongoCollection<T>;
-    }
-
-    // cache miss, find existing collection in database
-    const db = mongoClient.db(Config.teams.database_name);
-    const collections = await db.listCollections({name: name}).toArray();
-
-    let collection;
-
-    // create new collection if it doesn't exist
-    if (collections.length == 0) {
-        collection = await db.createCollection<T>(name);
-    } else {
-        collection = db.collection<T>(name);
-    }
-
-    // add collection into cache for fast access in the future
-    collectionCache.set(name, collection);
-    return collection;
+export const GetStandardizedTeamName = (displayName: string): string => {
+    return Discordify(displayName).toLowerCase();
 };
 
-// Performs an operation under the safety of a transaction. Auto-commits after operation success.
-export const WithTransaction = async (
-    operation: {
-        (session: ClientSession): Promise<string>;
-    },
-    rollback?: {(error: string): Promise<void>}
-): Promise<string> => {
-    const session = mongoClient.startSession();
-    rollback = rollback ?? (async (_) => {});
-
-    try {
-        session.startTransaction();
-
-        // try to complete the operation, if it errors catch and abort
-        const error = await operation(session);
-        if (error) {
-            throw new Error(error);
-        }
-
-        await session.commitTransaction();
-        return "";
-    } catch (err) {
-        if (session.inTransaction()) {
-            try {
-                await Promise.allSettled([
-                    rollback(`${err}`),
-                    session.abortTransaction(),
-                ]);
-            } catch (err) {
-                logger.warn(`Error while rolling back transaction: ${err}`);
-            }
-        }
-        return `${err}`;
-    } finally {
-        await session.endSession();
-    }
+/**
+ * Determines how many (un)verified hackers the bot knows about. The bot knows
+ * about a hacker if they have ever successfully ran `/verify`, even if they
+ * have since used `/unverify`.
+ *
+ * @param includeUnverified whether or not to include unverified hackers.
+ * @returns the number of hackers, optionally including unverified ones.
+ */
+export const GetHackerCount = async (): Promise<number> => {
+    return await prisma.hacker.count();
 };
 
-export const CountEntities = async (collection: string): Promise<number> => {
-    const db = await GetClient(collection);
-    return await db.estimatedDocumentCount();
-};
-
-// inserts a document into the named collection
-export const InsertOne = async <T>(
-    collection: string,
-    toInsert: OptionalUnlessRequiredId<T>,
-    options?: Partial<{session: ClientSession}>
-): Promise<boolean> => {
-    const db = await GetClient<T>(collection);
-    let result;
-    try {
-        result = await db.insertOne(toInsert, {session: options?.session});
-    } catch (err) {
-        logger.error(`Inserting ${JSON.stringify(toInsert)} failed: ${err}`);
-        return false;
-    }
-
-    return result.acknowledged;
-};
-
-// returns a document matching the query inside the named collection
-export const FindOne = async <T>(
-    collection: string,
-    query: Query<T>,
-    options?: Partial<{session: ClientSession}>
-): Promise<T | null> => {
-    const db = await GetClient<T>(collection);
-
-    const result = await db.findOne(query, {session: options?.session});
-    return result as T | null;
-};
-
-// finds and replaces a document matching the query inside the named collection
-export const FindAndReplace = async <T>(
-    collection: string,
-    find: T | Query<T>,
-    replaceWith: T,
-    options?: Partial<{session: ClientSession; required: boolean}>
-): Promise<boolean> => {
-    const db = await GetClient<T>(collection);
-    const result = await db.findOneAndReplace(find, replaceWith, {
-        session: options?.session,
-    });
-
-    return !!result.ok || !(options?.required ?? true);
-};
-
-// finds a document and applies the update to it
-export const FindAndUpdate = async <T>(
-    collection: string,
-    find: T | Query<T>,
-    update: UpdateFilter<T> | Partial<T>,
-    options?: Partial<{session: ClientSession; required: boolean; upsert: boolean}>
-): Promise<boolean> => {
-    const upsert = options?.upsert ?? false;
-    const db = await GetClient<T>(collection);
-    const result = await db.updateOne(find, update, {
-        upsert: upsert,
-        session: options?.session,
-    });
-
-    return !!result.acknowledged || !(options?.required ?? true);
-};
-
-export const FindAndUpdateAll = async <T>(
-    collection: string,
-    find: T | Query<T>,
-    update: UpdateFilter<T>,
-    options?: Partial<{session: ClientSession; required: boolean}>
+export const UpsertHacker = async (
+    discordId: string,
+    firstName: string,
+    lastName: string,
+    email: string
 ) => {
-    const db = await GetClient<T>(collection);
-    const result = await db.updateMany(find, update, {session: options?.session});
-    return (
-        (!!result.acknowledged && result.matchedCount !== 0) ||
-        !(options?.required ?? true)
-    );
+    return await prisma.hacker.upsert({
+        create: {discordId, firstName, lastName, email},
+        update: {discordId, firstName, lastName, email},
+        where: {discordId},
+    });
 };
 
-// finds and removes a document matching the query from the named collection
-export const FindAndRemove = async <T>(
-    collection: string,
-    toDelete: T | Query<T>,
-    options?: Partial<{session: ClientSession; required: boolean}>
-): Promise<boolean> => {
-    const db = await GetClient<T>(collection);
-    const result = await db.findOneAndDelete(toDelete, {session: options?.session});
+export const GetHacker = async (discordId: string) => {
+    return await prisma.hacker.findUnique({where: {discordId}, include: {team: true}});
+};
 
-    return !!result.ok && (result.value !== null || !(options?.required ?? true));
+export const DeleteHacker = async (discordId: string) => {
+    return await prisma.hacker.delete({where: {discordId}});
+};
+
+export const IsEmailVerified = async (email: string): Promise<boolean> => {
+    const hackerUsingEmail = await prisma.hacker.findFirst({
+        where: {email: email},
+    });
+    return hackerUsingEmail !== null;
+};
+
+export const GetTeam = async (standardName: string) => {
+    return await prisma.team.findUnique({where: {stdName: standardName}});
+};
+
+export const GetMembersOfTeam = async (standardName: string) => {
+    return await prisma.hacker.findMany({where: {teamStdName: standardName}});
+};
+
+export const CreateTeam = async (
+    displayName: string,
+    categoryId: string,
+    textChannelId: string,
+    voiceChannelId: string
+) => {
+    try {
+        const stdName = GetStandardizedTeamName(displayName);
+        return await prisma.team.create({
+            data: {stdName, displayName, categoryId, textChannelId, voiceChannelId},
+        });
+    } catch {
+        return null;
+    }
+};
+
+export const DeleteTeam = async (standardName: string) => {
+    try {
+        return await prisma.team.delete({where: {stdName: standardName}});
+    } catch {
+        return null;
+    }
+};
+
+export const AddHackerToTeam = async (teamStdName: string, discordId: string) => {
+    return await prisma.hacker.update({
+        where: {discordId},
+        data: {teamStdName},
+    });
+};
+
+export const RemoveHackerFromTeam = async (discordId: string) => {
+    try {
+        return await prisma.hacker.update({
+            where: {discordId},
+            data: {teamStdName: null},
+        });
+    } catch {
+        return null;
+    }
+};
+
+export const UpsertInvite = async (inviteeId: string, teamStdName: string) => {
+    try {
+        return await prisma.invite.upsert({
+            create: {teamStdName, inviteeId},
+            update: {},
+            where: {
+                inviteeId_teamStdName: {inviteeId, teamStdName},
+            },
+        });
+    } catch {
+        return null;
+    }
+};
+
+export const DeleteInvite = async (inviteeId: string, teamStdName: string) => {
+    return await prisma.invite.delete({
+        where: {inviteeId_teamStdName: {inviteeId, teamStdName}},
+    });
+};
+
+export const GetHackerInvites = async (discordId: string) => {
+    return await prisma.invite.findMany({where: {inviteeId: discordId}});
+};
+
+export const GetInvite = async (inviteeId: string, teamStdName: string) => {
+    return await prisma.invite.findUnique({
+        where: {
+            inviteeId_teamStdName: {inviteeId, teamStdName},
+        },
+        include: {
+            Team: true,
+        },
+    });
+};
+
+/**
+ * Finds and returns the team a Discord user belongs to, if one exists.
+ *
+ * @param discordId the discord snowflake identifying the user
+ * @returns the team that the discord user belongs to, or null if
+ * they are not in a team.
+ */
+export const GetHackerTeam = async (discordId: string) => {
+    const hacker = await GetHacker(discordId);
+    if (!hacker?.teamStdName) {
+        return null;
+    }
+
+    return await GetTeam(hacker.teamStdName);
+};
+
+export const CreateCategory = async (id: string) => {
+    return await prisma.discordCategory.create({data: {categoryId: id}});
+};
+
+export const GetAllCategories = async () => {
+    return await prisma.discordCategory.findMany({
+        include: {
+            _count: {
+                select: {
+                    teams: true,
+                },
+            },
+        },
+    });
+};
+
+/**
+ * Runs a given function within the context of a database transaction. The function
+ * return `false` or throw an error to abort the transaction. If the function
+ * completes returning `true`, the transaction is committed.
+ * @param callback the function to run
+ * @returns whether or not the transaction completed
+ */
+export const WithTransaction = async (callback: () => Promise<boolean>) => {
+    let result: boolean = true;
+
+    await prisma.$transaction(async (tx) => {
+        try {
+            result = await callback();
+            if (!result) {
+                throw Error("Aborting transaction");
+            }
+        } catch (e) {
+            result = false;
+            throw e;
+        }
+    });
+
+    return result;
 };

@@ -8,48 +8,26 @@ import {
     TextChannel,
 } from "discord.js";
 import {Config} from "../../config";
-import {FindAndUpdate, teamCollection, WithTransaction} from "../../helpers/database";
-import {
-    ErrorMessage,
-    ResponseEmbed,
-    SafeDeferReply,
-    SafeReply,
-} from "../../helpers/responses";
-import {InviteType, TeamType} from "../../types";
+import {ErrorMessage, ResponseEmbed, SafeReply} from "../../helpers/responses";
 import {NotInGuildResponse, TeamFullResponse} from "./team-shared";
-import {Timestamp} from "../../helpers/misc";
 import {MessageButtonStyles} from "discord.js/typings/enums";
-import {hyperlink, TimestampStyles} from "@discordjs/builders";
-import {logger} from "../../logger";
-import {GetVerifiedUser} from "../../helpers/userManagement";
+import {hyperlink, userMention} from "@discordjs/builders";
+import {Team} from "@prisma/client";
+import {UpsertInvite, GetMembersOfTeam, GetHacker} from "../../helpers/database";
+import {BuildInviteButtonId, InviteAction} from "../../events/buttons/invite";
 
 export const InviteToTeam = async (
     intr: CommandInteraction<CacheType>,
-    team: TeamType
+    team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
         return SafeReply(intr, NotInGuildResponse());
     }
 
-    if (team.members.length >= Config.teams.max_team_size) {
-        return SafeReply(intr, TeamFullResponse());
-    }
-
     const invitee = intr.options.getUser("user", true);
-    await SafeDeferReply(intr);
 
-    if (!(await GetVerifiedUser(invitee.id))) {
-        return SafeReply(
-            intr,
-            ErrorMessage({
-                title: "User Not Verified",
-                message: [
-                    "You can only invite verified users to your team.",
-                    "Ask them to verify first with `/verify`.",
-                ].join(" "),
-            })
-        );
-    } else if (intr.user.id === invitee.id && !Config.dev_mode) {
+    // trivial check to see if a user is inviting themself
+    if (intr.user.id === invitee.id && !Config.dev_mode) {
         return SafeReply(
             intr,
             ErrorMessage({
@@ -61,7 +39,37 @@ export const InviteToTeam = async (
                 ].join(" "),
             })
         );
-    } else if (team.members.includes(invitee.id)) {
+    }
+
+    const teamMembers = await GetMembersOfTeam(team.displayName);
+    const teamMemberIds = teamMembers.map((member) => member.discordId);
+
+    if (teamMemberIds.length >= Config.teams.max_team_size) {
+        return SafeReply(intr, TeamFullResponse());
+    }
+
+    /**
+     * Beyond not inviting yourself, an invite must meet the following:
+     * 1. The invitee must be verified,
+     * 2. The invitee must not be in your team, and
+     * 3. The invitee must not have already been invited.
+     */
+
+    const inviteeHacker = await GetHacker(invitee.id);
+    if (!inviteeHacker) {
+        return SafeReply(
+            intr,
+            ErrorMessage({
+                title: "User Not Verified",
+                message: [
+                    "You can only invite verified users to your team.",
+                    "Ask them to verify first with `/verify`.",
+                ].join(" "),
+            })
+        );
+    }
+
+    if (teamMemberIds.includes(invitee.id)) {
         return SafeReply(
             intr,
             ErrorMessage({
@@ -70,73 +78,54 @@ export const InviteToTeam = async (
                 message: `${invitee} is already a member of your team.`,
             })
         );
-    } else if (team.invites.findIndex((inv) => inv.invitee === invitee.id) !== -1) {
+    }
+
+    const invite = await UpsertInvite(invitee.id, team.stdName);
+    if (!invite) {
+        const mention = userMention(invitee.id);
         return SafeReply(
             intr,
             ErrorMessage({
-                emote: ":thinking:",
-                title: "Member Already Invited",
-                message: `You already invited ${invitee}. Invites don't expire, just be patient.`,
+                title: "Failed to Invite " + mention,
+                message: `Something went wrong while inviting ${mention}. Please try again in about a minute.`,
             })
         );
     }
 
-    const invite: InviteType = {
-        teamName: team.name,
-        invitee: invitee.id,
-        inviteID: `${Date.now()}`,
-    };
-
-    let message: Message<boolean>;
-    const inviteError = await WithTransaction(async (session) => {
-        const inviteAdd = await FindAndUpdate<TeamType>(
-            teamCollection,
-            team,
-            {$push: {invites: invite}},
-            {session}
+    const buttonRow = new MessageActionRow().setComponents(
+        new MessageButton()
+            .setStyle(MessageButtonStyles.SECONDARY)
+            .setCustomId(BuildInviteButtonId(InviteAction.Decline, invite))
+            .setLabel("Decline"),
+        new MessageButton()
+            .setStyle(MessageButtonStyles.PRIMARY)
+            .setCustomId(BuildInviteButtonId(InviteAction.Accept, invite))
+            .setLabel("Accept")
+    );
+    const inviteMsg = ResponseEmbed()
+        .setTitle(":partying_face: You've Been Invited")
+        .setDescription(
+            [
+                `You've been invited to join Team ${team.displayName}`,
+                `for ${Config.bot_info.event_name} by`,
+                `${(intr.member! as GuildMember).displayName}.`,
+            ].join(" ")
         );
-        if (!inviteAdd) {
-            return "Failed to add invite";
-        }
 
-        // NOTE: custom IDs must be of form "invite;ACTION;INVITE_ID"
-        const buttonRow = new MessageActionRow().setComponents(
-            new MessageButton()
-                .setStyle(MessageButtonStyles.SECONDARY)
-                .setCustomId(`invite;decline;${invite.inviteID}`)
-                .setLabel("Decline"),
-            new MessageButton()
-                .setStyle(MessageButtonStyles.PRIMARY)
-                .setCustomId(`invite;accept;${invite.inviteID}`)
-                .setLabel("Accept")
-        );
-        const inviteMsg = ResponseEmbed()
-            .setTitle(":partying_face: You've Been Invited")
-            .setDescription(
-                [
-                    `You've been invited to join Team ${team.name}`,
-                    `for ${Config.bot_info.event_name} by`,
-                    `${(intr.member! as GuildMember).displayName}.`,
-                ].join(" ")
-            );
+    let message: Message<boolean> | null = null;
+    await invitee
+        .send({
+            embeds: [inviteMsg],
+            components: [buttonRow],
+        })
+        .then((m) => (message = m))
+        .catch(() => (message = null));
 
-        try {
-            message = await invitee.send({
-                embeds: [inviteMsg],
-                components: [buttonRow],
-            });
-        } catch (err) {
-            return `Failed to invite user: ${err}`;
-        }
-
-        return "";
-    });
-
-    if (inviteError) {
+    if (message === null) {
         return SafeReply(
             intr,
             ErrorMessage({
-                title: "Unable to DM User",
+                title: `Unable to DM ${userMention(invitee.id)}`,
                 message: [
                     `It seems ${invitee} doesn't allow DMs from this server. Please ask them to`,
                     hyperlink(
@@ -149,19 +138,22 @@ export const InviteToTeam = async (
         );
     }
 
-    const teamText = (await intr.guild!.channels.fetch(team.textChannel)) as TextChannel;
+    const teamText = (await intr.guild!.channels.fetch(
+        team.textChannelId
+    )) as TextChannel | null;
     const invitedMember = await intr.guild!.members.fetch(invitee.id)!;
     const invitedEmbed = ResponseEmbed()
         .setTitle(":white_check_mark: Invite Sent")
         .setDescription(`${invitedMember.displayName} has been invited.`);
 
-    try {
-        // prevent message duplication when inviting inside team channel
-        if (teamText.id !== intr.channelId) {
-            await teamText.send({embeds: [invitedEmbed]});
-        }
-    } catch (err) {
-        logger.warn(`Failed to send channel creation message to ${teamText}: ${err}`);
+    // If we are in the team text channel, we should reply non-ephemerally.
+    // If we are not in the team text channel, then we should reply ephemerally
+    // and push a notification to the team text channel.
+
+    if (intr.channelId === teamText?.id) {
+        return SafeReply(intr, {embeds: [invitedEmbed]});
+    } else {
+        await teamText?.send({embeds: [invitedEmbed]});
+        return SafeReply(intr, {embeds: [invitedEmbed], ephemeral: true});
     }
-    return SafeReply(intr, {embeds: [invitedEmbed], ephemeral: true});
 };

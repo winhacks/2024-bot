@@ -4,8 +4,6 @@ import {Config} from "../config";
 import {ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
 
-// FINISHED
-
 const aboutModule: CommandType = {
     data: new SlashCommandBuilder()
         .setName("about")

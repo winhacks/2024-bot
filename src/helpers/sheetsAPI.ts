@@ -1,7 +1,6 @@
 import {google} from "googleapis";
 import {Config} from "../config";
 import {logger} from "../logger";
-import {CardInfoType} from "../types";
 
 export type MajorDimension = "ROWS" | "COLUMNS";
 
@@ -22,6 +21,10 @@ export const BuildRange = (sheet: string, startCell: string, endCell: string) =>
     return `${sheet}!${startCell}:${endCell}`;
 };
 
+export const BuildSingleCellRange = (sheet: string, cell: string) => {
+    return BuildRange(sheet, cell, cell);
+};
+
 /**
  * Gets data from `target`
  * @param target_id the ID of the sheet to read from
@@ -33,12 +36,13 @@ export const GetRange = async (
     target_id: string,
     range: string,
     major: MajorDimension = "ROWS"
-) =>
-    sheets.values.get({
+) => {
+    return sheets.values.get({
         spreadsheetId: target_id,
         range: range,
         majorDimension: major,
     });
+};
 
 /**
  * Returns the data in a single column of `targetSheet` on page `sheetNumber` in column-major form
@@ -72,24 +76,51 @@ export const GetRow = async (
     return (await GetRange(target_id, range, "ROWS")).data.values![0];
 };
 
-export const GetUserData = async (
-    target_id: string,
-    target_sheet: string,
-    row: number | string
-): Promise<CardInfoType> => {
-    const rowData = await GetRow(target_id, target_sheet, row);
+export const GetUserData = async (email: string) => {
+    // get data from sheets API
+    const emailColumn = await GetColumn(
+        Config.verify.target_sheet_id,
+        Config.verify.target_sheet,
+        Config.verify.email_column
+    );
+
+    // find the last index of the input email, if it exists
+    const emailIndex = emailColumn.lastIndexOf(email);
+    logger.info(`Found ${email} in row ${emailIndex}`);
+
+    // email not in column, this user should not be verified
+    if (emailIndex === -1) {
+        return null;
+    }
+
+    const emailRowNumber = emailIndex + 1;
+    const ranges = await sheets.values.batchGet({
+        spreadsheetId: Config.verify.target_sheet_id,
+        majorDimension: "ROWS",
+        ranges: [
+            BuildSingleCellRange(
+                Config.verify.target_sheet,
+                `${Config.verify.first_name_column}${emailRowNumber}`
+            ),
+            BuildSingleCellRange(
+                Config.verify.target_sheet,
+                `${Config.verify.last_name_column}${emailRowNumber}`
+            ),
+            BuildSingleCellRange(
+                Config.verify.target_sheet,
+                `${Config.verify.email_column}${emailRowNumber}`
+            ),
+        ],
+    });
+
+    if (ranges.status !== 200) {
+        return null;
+    }
+
+    const [firstNameValues, lastNameValues, emailValues] = ranges.data.valueRanges!;
     return {
-        authorizedCard: rowData[15] === "TRUE",
-        firstName: rowData[0],
-        lastName: rowData[1],
-        pronouns: rowData[6],
-        github: rowData[11],
-        linkedIn: rowData[10],
-        website: rowData[12],
-        resume: rowData[13],
-        studyArea: rowData[7],
-        studyLocation: rowData[4],
-        phone: rowData[2],
-        email: rowData[3],
+        firstName: firstNameValues.values![0][0],
+        lastName: lastNameValues.values![0][0],
+        email: emailValues.values![0][0],
     };
 };

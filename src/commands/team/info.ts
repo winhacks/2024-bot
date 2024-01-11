@@ -1,25 +1,28 @@
 import {CacheType, CommandInteraction} from "discord.js";
-import {ChannelLink, UserLink} from "../../helpers/misc";
 import {ResponseEmbed, SafeReply} from "../../helpers/responses";
-import {TeamType} from "../../types";
 import {NotInGuildResponse} from "./team-shared";
+import {Team} from "@prisma/client";
+import {GetMembersOfTeam} from "../../helpers/database";
+import {channelMention, userMention} from "@discordjs/builders";
 
 export const TeamInfo = async (
     intr: CommandInteraction<CacheType>,
-    team: TeamType
+    team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
         return SafeReply(intr, NotInGuildResponse());
     }
 
-    const members = team.members.map((id) => UserLink(id));
+    const members = (await GetMembersOfTeam(team.stdName))
+        .map((member) => member.discordId)
+        .map(userMention);
     const channels = [
-        ChannelLink(team.textChannel), //
-        ChannelLink(team.voiceChannel),
+        channelMention(team.textChannelId),
+        channelMention(team.voiceChannelId),
     ];
 
     const embed = ResponseEmbed()
-        .setTitle(team.name)
+        .setTitle(team.displayName)
         .addField("Team Members:", members.join("\n"))
         .addField("Team Channels", channels.join("\n"));
 

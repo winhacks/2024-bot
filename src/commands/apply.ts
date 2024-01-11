@@ -1,12 +1,8 @@
-import {hyperlink, SlashCommandBuilder} from "@discordjs/builders";
+import {channelMention, hyperlink, SlashCommandBuilder} from "@discordjs/builders";
 import {CacheType, CommandInteraction} from "discord.js";
 import {Config} from "../config";
-import {ChannelLink} from "../helpers/misc";
-import {ErrorMessage, ResponseEmbed, SafeReply} from "../helpers/responses";
-import {logger} from "../logger";
+import {ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
-
-let verifyChannelId: string | undefined = undefined;
 
 const applyModule: CommandType = {
     data: new SlashCommandBuilder()
@@ -14,22 +10,13 @@ const applyModule: CommandType = {
         .setDescription("Instructions for how to apply."),
     deferMode: "NO-DEFER",
     execute: async (intr: CommandInteraction<CacheType>) => {
-        if (!verifyChannelId) {
-            verifyChannelId = intr.guild?.channels.cache.findKey(
-                (c) => c.name === Config.verify.channel_name
-            );
-        }
-
-        if (!verifyChannelId) {
-            logger.error("Verify channel could not be found while running /apply.");
-            return SafeReply(intr, ErrorMessage());
-        }
+        const verifyChannelId = Config.verify.channel_id;
 
         let onlineLink = hyperlink("online", Config.verify.registration_url);
         let applyInstructions = `To apply, first register ${onlineLink}`;
 
         let verifyInstructions = verifyChannelId
-            ? `head over to ${ChannelLink(verifyChannelId)} and`
+            ? `head over to ${channelMention(verifyChannelId)} and`
             : "";
         verifyInstructions += " use `/verify` to verify your Discord account";
 

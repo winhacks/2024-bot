@@ -3,21 +3,16 @@ import {
     SlashCommandBuilder,
     SlashCommandStringOption,
 } from "@discordjs/builders";
-import {CacheType, CommandInteraction, Guild, GuildMember} from "discord.js";
+import {CacheType, CommandInteraction, GuildMember} from "discord.js";
 import {Config} from "../config";
-import {
-    FindOne,
-    InsertOne,
-    verifiedCollection,
-    WithTransaction,
-} from "../helpers/database";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
-import {GetColumn, GetUserData} from "../helpers/sheetsAPI";
+import {GetUserData} from "../helpers/sheetsAPI";
 import {GiveUserRole, RenameUser, TakeUserRole} from "../helpers/userManagement";
 import {logger} from "../logger";
-import {CardInfoType, CommandType, VerifiedUserType} from "../types";
+import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
+import {UpsertHacker, GetHacker, IsEmailVerified} from "../helpers/database";
 
 // source: https://www.emailregex.com/ (apparently 99.99% accurate)
 const emailRegex =
@@ -35,39 +30,12 @@ const verifyModule: CommandType = {
         ),
     deferMode: "EPHEMERAL",
     execute: async (intr: CommandInteraction<CacheType>): Promise<any> => {
-        const email = intr.options.getString("email", true).toLowerCase();
-
         // ensure command running in guild
         if (!intr.inGuild()) {
             return SafeReply(intr, NotInGuildResponse());
         }
 
-        // check if user is already verified or someone already used this email
-        const existingUser = await FindOne<VerifiedUserType>(verifiedCollection, {
-            $or: [{userID: intr.user.id}, {email: email}],
-        });
-        if (existingUser?.userID === intr.user.id) {
-            return SafeReply(
-                intr,
-                ErrorMessage({
-                    emote: ":fire:",
-                    title: "Already Verified",
-                    message: "You're already verified, no need to verify again.",
-                })
-            );
-        } else if (existingUser?.email === email) {
-            return SafeReply(
-                intr,
-                ErrorMessage({
-                    emote: ":fire:",
-                    title: "Email Already Used",
-                    message: [
-                        `It looks like someone is already registered with that email."
-                        "If this is a mistake, please reach out to a Lead or Admin.`,
-                    ].join(" "),
-                })
-            );
-        }
+        const email = intr.options.getString("email", true).toLowerCase();
 
         // ensure email is valid
         if (!email.match(emailRegex)) {
@@ -80,45 +48,75 @@ const verifyModule: CommandType = {
             );
         }
 
-        // get data from sheets API
-        const emailColumn = await GetColumn(
-            Config.verify.target_sheet_id,
-            Config.verify.target_sheet,
-            Config.verify.email_column
-        );
+        /**
+         * Assuming a valid email is given, the following checks must be made:
+         * 1. The user cannot already be verified
+         * 2. The email must not be used for another user's verification
+         * 3. The email must be present in the application form results.
+         *    This check is passed inherently if it is possible to fetch the
+         *    user's data.
+         */
 
-        // find the last index of the input email, if it exists (case insensitive)
-        let emailIndex = -1;
-        for (let index = emailColumn.length - 1; index >= 0; index--) {
-            if (email === emailColumn[index].toLowerCase()) {
-                emailIndex = index;
-                break;
+        const existingHacker = await GetHacker(intr.user.id);
+        if (existingHacker) {
+            // if they appear to be changing their email, we can provide them with some help :)
+            if (existingHacker.email !== email) {
+                return SafeReply(
+                    intr,
+                    ErrorMessage({
+                        emote: ":confused:",
+                        title: "Already Verified With Other Email",
+                        message: [
+                            "You already verified with another email address. If you want",
+                            "to change your email, use `/unverify` first, then `/verify` again",
+                            "with the new email.",
+                        ].join(" "),
+                    })
+                );
             }
+
+            return SafeReply(
+                intr,
+                ErrorMessage({
+                    emote: ":fire:",
+                    title: "Already Verified",
+                    message: "You're already verified, no need to verify again.",
+                })
+            );
         }
 
-        // email not in column, this user should not be verified
-        if (emailIndex === -1) {
+        if (await IsEmailVerified(email)) {
+            return SafeReply(
+                intr,
+                ErrorMessage({
+                    emote: ":fire:",
+                    title: "Email Already Used",
+                    message: [
+                        "It looks like someone is already registered with that email.",
+                        "If this is a mistake, please reach out to a Lead or Admin.",
+                    ].join(" "),
+                })
+            );
+        }
+
+        const userData = await GetUserData(email);
+        if (!userData) {
             const registerLink = Config.verify.registration_url;
             return SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Verification Failed",
                     message: [
-                        `I couldn't verify that email address. If you haven't registered,`,
+                        "I couldn't verify that email address. If you haven't registered,",
                         `you can ${hyperlink("register here", registerLink)}.`,
                     ].join(" "),
                 })
             );
         }
 
-        const userData = await GetUserData(
-            Config.verify.target_sheet_id,
-            Config.verify.target_sheet,
-            1 + emailIndex
-        );
-
         // HOTFIX: Discord prevents nicknames over 32 characters, lets give a nice error for that
-        if (`${userData.firstName} ${userData.lastName}`.length > 32) {
+        const nickname = `${userData.firstName} ${userData.lastName}`;
+        if (nickname.length > 32) {
             return SafeReply(
                 intr,
                 ErrorMessage({
@@ -132,19 +130,47 @@ const verifyModule: CommandType = {
         }
 
         // verify user
+        const guild = intr.guild!;
         const member = intr.member as GuildMember;
-        const result = await DoVerifyUser(intr.guild!, member, email, userData);
 
-        // verification went OK
-        if (!result) {
-            // verification failed
+        // give the verified role if such a role is configured
+        if (Config.verify.verified_role_name) {
+            const verifiedRoleName = Config.verify.verified_role_name;
+            const verifiedRole = guild.roles.cache.findKey(
+                (r) => r.name === verifiedRoleName
+            );
+
+            if (!verifiedRole) {
+                return SafeReply(intr, ErrorMessage());
+            }
+
+            const giveRoleError = await GiveUserRole(member, verifiedRole);
+            if (giveRoleError) {
+                return SafeReply(intr, ErrorMessage());
+            }
+        }
+
+        // insert user into database
+        const user = await UpsertHacker(
+            member.user.id,
+            userData.firstName,
+            userData.lastName,
+            userData.email
+        );
+
+        if (!user) {
             return SafeReply(intr, ErrorMessage());
         }
 
-        intr.client.emit("userVerified", member);
+        const isGuildOwner = member.id === guild!.ownerId;
+        if (!isGuildOwner) {
+            await RenameUser(member, nickname);
+        }
 
+        intr.client.emit("userVerified", member);
         logger.info(`Verified "${PrettyUser(intr.user)}" with ${email}`);
-        if (intr.user.id !== intr.guild?.ownerId) {
+
+        if (!isGuildOwner) {
             return SafeReply(intr, SuccessMessage({message: "You are now verified."}));
         } else {
             logger.warn(
@@ -164,90 +190,6 @@ const verifyModule: CommandType = {
             );
         }
     },
-};
-
-const DoVerifyUser = async (
-    guild: Guild,
-    member: GuildMember,
-    email: string,
-    userData: CardInfoType
-): Promise<boolean> => {
-    const verifiedUser: VerifiedUserType = {
-        userID: member.id,
-        verifiedAt: Date.now(),
-        email: email,
-        cardInfo: userData,
-    };
-
-    // look up the role we may need to give
-    const verRole = guild.roles.cache.findKey(
-        (r) => r.name === Config.verify.verified_role_name
-    );
-
-    let oldNick = member.nickname;
-    let roleGiven = false;
-    let nickChanged = false;
-
-    const error = await WithTransaction(
-        async (session) => {
-            const insertFail = "Could not insert new verified user";
-            const insertion = InsertOne<VerifiedUserType>(
-                verifiedCollection,
-                verifiedUser,
-                {session}
-            );
-
-            // if there is no role to add in the config, just return the insert result
-            if (!Config.verify.verified_role_name) {
-                return (await insertion) ? "" : insertFail;
-            } else if (!verRole) {
-                // if there is a role but it wasn't found, that's an error
-                return "Role could not be found";
-            }
-
-            // give verified role
-            const giveUserRoleErr = await GiveUserRole(member, verRole);
-            if (giveUserRoleErr) {
-                return giveUserRoleErr;
-            }
-            roleGiven = true;
-
-            // nickname user if they are not owner
-            if (member.id !== guild.ownerId) {
-                const giveNickErr = await RenameUser(
-                    member,
-                    `${userData.firstName} ${userData.lastName}`
-                );
-                if (giveNickErr) {
-                    return giveNickErr;
-                }
-            }
-            nickChanged = true;
-
-            return "";
-        },
-        async (err) => {
-            if (roleGiven) {
-                await TakeUserRole(member, verRole!);
-                logger.error(
-                    `An error occurred while updating ${PrettyUser(
-                        member.user
-                    )}'s roles: ${err}`
-                );
-            }
-
-            if (nickChanged) {
-                await RenameUser(member, oldNick);
-                logger.error(
-                    `An error occurred while updating ${PrettyUser(
-                        member.user
-                    )}'s nickname: ${err}`
-                );
-            }
-        }
-    );
-
-    return !error;
 };
 
 export {verifyModule as command};

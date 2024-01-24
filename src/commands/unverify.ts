@@ -74,8 +74,6 @@ const HandleUnverify = async (guild: Guild, member: GuildMember): Promise<void> 
             throw Error(takeUserRoleErr);
         }
 
-        await DeleteHacker(member.user.id);
-
         if (member.user.id !== guild.ownerId) {
             await member.setNickname(null, "User unverified");
         }

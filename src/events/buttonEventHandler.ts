@@ -33,20 +33,32 @@ const GetHandler = async (prefix: string): Promise<ButtonAction | null> => {
         return existing;
     }
 
-    const extension = ".ts";
+    const extensions = [".ts", ".js"];
 
-    const actionFiles = readdirSync("./src/events/buttons")
-        .filter((file) => file.endsWith(extension))
-        .map((file) => file.slice(0, -extension.length));
+    const actionFiles = readdirSync(`${__dirname}/buttons`)
+        .filter((file) => extensions.some(ext => file.endsWith(ext)))
+        .map((file) => file.replace(/\.(ts|js)$/, ""));
 
     if (actionFiles.includes(prefix)) {
         logger.debug(`First-time loading ${prefix} ButtonAction...`);
+
+        const matchingFiles = readdirSync(`${__dirname}/buttons`)
+            .filter((file) => file.startsWith(prefix) && extensions.some(ext => file.endsWith(ext)));
+
+        if (matchingFiles.length === 0) {
+            return null;
+        }
+
+        const selectedFile = matchingFiles[0]; 
+        const extension = selectedFile.slice(-3); 
+
         const path = formatPath({
-            dir: "./buttons",
+            dir: `${__dirname}/buttons`,
             name: prefix,
             ext: extension,
         });
-        const {action} = (await import(path)) as {action: ButtonAction};
+
+        const { action } = (await import(path)) as { action: ButtonAction };
 
         handlers.set(prefix, action); // cache for future calls
         return action;

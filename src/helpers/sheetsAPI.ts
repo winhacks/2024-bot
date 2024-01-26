@@ -84,8 +84,8 @@ export const GetUserData = async (email: string) => {
         Config.verify.email_column
     );
 
-    // find the last index of the input email, if it exists
-    const emailIndex = emailColumn.lastIndexOf(email);
+    const lowerCaseEmailColumn = emailColumn.map((e) => e.toLowerCase());
+    const emailIndex = lowerCaseEmailColumn.lastIndexOf(email);
     logger.info(`Found ${email} in row ${emailIndex}`);
 
     // email not in column, this user should not be verified

@@ -19,7 +19,7 @@ const buttonHandlerModule: EventType = {
 
         try {
             const action = await GetHandler(prefix);
-            return action!.execute(intr);
+            return await action!.execute(intr);
         } catch (err) {
             logger.error(`Button Action ${prefix} failed: ${err}`);
             return intr.reply(ErrorMessage({ephemeral: true}));

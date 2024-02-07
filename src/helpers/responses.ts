@@ -48,7 +48,7 @@ export const SafeDeferReply = async (
 ) => {
     try {
         if (!intr.deferred && !intr.replied) {
-            return intr.deferReply({ephemeral: ephemeral});
+            return await intr.deferReply({ephemeral: ephemeral});
         }
     } catch (err) {
         logger.error(`Deferral failed: ${err}`);

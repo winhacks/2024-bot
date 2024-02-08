@@ -1,4 +1,4 @@
-import {CommandInteraction, CacheType} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {Config} from "../../config";
 import {
     CreateTeam,
@@ -23,10 +23,9 @@ import {
     NotVerifiedResponse,
     ValidateTeamName,
 } from "./team-shared";
-import {P} from "pino";
 
 export const CreateTeamSubcommand = async (
-    intr: CommandInteraction<CacheType>
+    intr: ChatInputCommandInteraction<CacheType>
 ): Promise<any> => {
     if (!intr.guild) {
         return SafeReply(intr, NotInGuildResponse());

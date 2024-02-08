@@ -1,4 +1,4 @@
-import {Client, Collection, Intents} from "discord.js";
+import {Client, Collection, GatewayIntentBits} from "discord.js";
 import {ClientType, CommandType, EventType} from "./types";
 import {Config, LoadConfig} from "./config";
 import {RegisterCommands} from "./helpers/commandManager";
@@ -24,9 +24,9 @@ const start = async (): Promise<void> => {
     logger.info("Authenticating with APIs...");
     client = new Client({
         intents: [
-            Intents.FLAGS.GUILDS, // TODO: try removing this. May in fact not be required.
-            Intents.FLAGS.GUILD_MEMBERS,
-            Intents.FLAGS.DIRECT_MESSAGES,
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.DirectMessages,
         ],
     }) as ClientType;
     client.commands = new Collection<string, CommandType>();

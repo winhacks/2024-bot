@@ -4,7 +4,7 @@ import {
     SlashCommandSubcommandBuilder,
     SlashCommandUserOption,
 } from "@discordjs/builders";
-import {CommandInteraction, CacheType} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {ErrorMessage, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
 import {CreateTeamSubcommand} from "./team/create";
@@ -51,7 +51,7 @@ const teamModule: CommandType = {
                 .setDescription("Leave your current team.")
         ),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>): Promise<any> => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         const subcommand = intr.options.getSubcommand();
 
         // user wants to create a new team

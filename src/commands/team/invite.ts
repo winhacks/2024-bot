@@ -1,23 +1,23 @@
 import {
     CacheType,
-    CommandInteraction,
+    ChatInputCommandInteraction,
     GuildMember,
     Message,
-    MessageActionRow,
-    MessageButton,
+    ActionRowBuilder,
+    ButtonBuilder,
     TextChannel,
+    ButtonStyle
 } from "discord.js";
 import {Config} from "../../config";
 import {ErrorMessage, ResponseEmbed, SafeReply} from "../../helpers/responses";
 import {NotInGuildResponse, TeamFullResponse} from "./team-shared";
-import {MessageButtonStyles} from "discord.js/typings/enums";
 import {hyperlink, userMention} from "@discordjs/builders";
 import {Team} from "@prisma/client";
 import {UpsertInvite, GetMembersOfTeam, GetHacker} from "../../helpers/database";
 import {BuildInviteButtonId, InviteAction} from "../../events/buttons/invite";
 
 export const InviteToTeam = async (
-    intr: CommandInteraction<CacheType>,
+    intr: ChatInputCommandInteraction<CacheType>,
     team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
@@ -92,13 +92,13 @@ export const InviteToTeam = async (
         );
     }
 
-    const buttonRow = new MessageActionRow().setComponents(
-        new MessageButton()
-            .setStyle(MessageButtonStyles.SECONDARY)
+    const buttonRow = new ActionRowBuilder<any>().setComponents(
+        new ButtonBuilder()
+            .setStyle(ButtonStyle.Secondary)
             .setCustomId(BuildInviteButtonId(InviteAction.Decline, invite))
             .setLabel("Decline"),
-        new MessageButton()
-            .setStyle(MessageButtonStyles.PRIMARY)
+        new ButtonBuilder()
+            .setStyle(ButtonStyle.Primary)
             .setCustomId(BuildInviteButtonId(InviteAction.Accept, invite))
             .setLabel("Accept")
     );
@@ -106,7 +106,7 @@ export const InviteToTeam = async (
         .setTitle(":partying_face: You've Been Invited")
         .setDescription(
             [
-                `You've been invited to join Team ${team.displayName}`,
+            `You've been invited to join Team ${team.displayName}`,
                 `for ${Config.bot_info.event_name} by`,
                 `${(intr.member! as GuildMember).displayName}.`,
             ].join(" ")

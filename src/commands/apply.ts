@@ -1,5 +1,5 @@
 import {channelMention, hyperlink, SlashCommandBuilder} from "@discordjs/builders";
-import {CacheType, CommandInteraction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {Config} from "../config";
 import {ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
@@ -9,7 +9,7 @@ const applyModule: CommandType = {
         .setName("apply")
         .setDescription("Instructions for how to apply."),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>) => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>) => {
         const verifyChannelId = Config.verify.channel_id;
 
         let onlineLink = hyperlink("online", Config.verify.registration_url);

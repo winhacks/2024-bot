@@ -1,5 +1,5 @@
 import {SlashCommandBooleanOption, SlashCommandBuilder} from "@discordjs/builders";
-import {CacheType, CommandInteraction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
 import {freemem, totalmem} from "os";
@@ -22,7 +22,7 @@ const pingModule: CommandType = {
                 .setRequired(false)
         ),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>) => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>) => {
         let uptime = intr.client.uptime!;
         const ms = uptime % 1000;
         const secs = (uptime = Math.floor(uptime / 1000)) % 60;
@@ -38,8 +38,14 @@ const pingModule: CommandType = {
 
         const embed = ResponseEmbed().setTitle("Pong!");
 
-        embed.addField("Ping", `${intr.client.ws.ping}ms`, true);
-        embed.addField("Uptime", `${dayStr}${hrStr}${minStr}${secStr}${msStr}`, true);
+        embed.addFields([
+            {name: "Ping", value: `${intr.client.ws.ping}ms`, inline: true},
+            {
+                name: "Uptime",
+                value: `${dayStr}${hrStr}${minStr}${secStr}${msStr}`,
+                inline: true,
+            },
+        ]);
 
         if (intr.options.getBoolean("detailed")) {
             const bytesToMB = 1 / (1000 * 1000);
@@ -50,8 +56,10 @@ const pingModule: CommandType = {
 
             const cpuPercent = Math.ceil((await currentLoad()).currentLoad);
 
-            embed.addField("CPU Usage:", `${cpuPercent}%`);
-            embed.addField("Memory Usage:", `${usedMB} of ${totalMB} MB`, true);
+            embed.addFields([
+                {name: "CPU Usage:", value: `${cpuPercent}%`, inline: true},
+                {name: "Memory Usage:", value: `${usedMB} of ${totalMB} MB`, inline: true},
+            ]);
         }
 
         return SafeReply(intr, {

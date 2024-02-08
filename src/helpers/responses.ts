@@ -2,9 +2,9 @@ import {
     CacheType,
     CommandInteraction,
     InteractionReplyOptions,
-    MessageActionRow,
+    ActionRowBuilder,
     MessageComponentInteraction,
-    MessageEmbed,
+    EmbedBuilder,
     MessagePayload,
 } from "discord.js";
 import {Config} from "../config";
@@ -57,10 +57,10 @@ export const SafeDeferReply = async (
 
 /**
  * Base builder for embed responses.
- * @returns A MessageEmbed builder with default styling
+ * @returns A EmbedBuilder with default styling
  */
 export const ResponseEmbed = () => {
-    return new MessageEmbed().setColor(Config.bot_info.color);
+    return new EmbedBuilder().setColor(Config.bot_info.color);
 };
 
 // SHARED RESPONSES -----------------------------------------------------------
@@ -69,7 +69,7 @@ type BotEmbedOptions = Partial<{
     title: string;
     message: string;
     ephemeral: boolean;
-    components: MessageActionRow[];
+    components: ActionRowBuilder<any>[];
 }>;
 
 /**
@@ -118,15 +118,11 @@ const BuildMessage = (
     title: string,
     message: string,
     ephemeral: boolean,
-    components: MessageActionRow[]
+    components: ActionRowBuilder<any>[]
 ) => {
     return {
+        embeds: [ResponseEmbed().setTitle(`${emote} ${title}`).setDescription(message)],
         ephemeral: ephemeral,
         components: components,
-        embeds: [
-            ResponseEmbed() //
-                .setTitle(`${emote} ${title}`)
-                .setDescription(message),
-        ],
     };
 };

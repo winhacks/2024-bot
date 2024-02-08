@@ -1,6 +1,6 @@
-import {SlashCommandBuilder, bold, userMention} from "@discordjs/builders";
+import {SlashCommandBuilder, bold} from "@discordjs/builders";
 import {CommandType} from "../types";
-import {CacheType, CommandInteraction, GuildMember} from "discord.js";
+import {CacheType, ChatInputCommandInteraction, GuildMember} from "discord.js";
 import {GetHacker} from "../helpers/database";
 import {ResponseEmbed, SafeReply} from "../helpers/responses";
 
@@ -9,7 +9,7 @@ const profileModule: CommandType = {
         .setName("profile")
         .setDescription("View hacker profile"),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>) => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>) => {
         const hacker = await GetHacker(intr.user.id);
         const verified = hacker ? ":white_check_mark:" : ":x:";
         const teamName = hacker?.team?.displayName ?? "No Team";

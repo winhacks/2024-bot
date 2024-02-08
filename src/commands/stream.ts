@@ -1,5 +1,5 @@
 import {SlashCommandBuilder} from "@discordjs/builders";
-import {CacheType, CommandInteraction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {Config} from "../config";
 import {ErrorMessage, ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
@@ -9,7 +9,7 @@ const streamModule: CommandType = {
         .setName("stream")
         .setDescription("Links the WinHacks stream"),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>) => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>) => {
         const twitchSocial = Config.socials.find(
             ({displayName}) =>
                 displayName.toLowerCase() === "twitch" ||

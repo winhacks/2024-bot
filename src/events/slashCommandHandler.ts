@@ -1,4 +1,4 @@
-import {CacheType, Interaction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {ErrorMessage, SafeDeferReply, SafeReply} from "../helpers/responses";
 import {logger} from "../logger";
 import {ClientType, EventType} from "../types";
@@ -6,7 +6,7 @@ import {ClientType, EventType} from "../types";
 const interactionHandlerModule: EventType = {
     eventName: "interactionCreate",
     once: false,
-    execute: async (client: ClientType, intr: Interaction<CacheType>) => {
+    execute: async (client: ClientType, intr: ChatInputCommandInteraction<CacheType>) => {
         if (!intr.isCommand()) {
             return;
         }

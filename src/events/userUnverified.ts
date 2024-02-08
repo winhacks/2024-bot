@@ -1,4 +1,4 @@
-import {GuildMember} from "discord.js";
+import {ActivityType, GuildMember} from "discord.js";
 import {SelectPlural} from "../helpers/misc";
 import {ClientType, EventType} from "../types";
 import {DeleteHacker, GetHackerCount} from "../helpers/database";
@@ -20,7 +20,7 @@ const userUnverifiedModule: EventType = {
 
         client.user?.setPresence({
             status: "online",
-            activities: [{type: "WATCHING", name: message}],
+            activities: [{type: ActivityType.Watching, name: message}],
         });
     },
 };

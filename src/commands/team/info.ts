@@ -1,4 +1,4 @@
-import {CacheType, CommandInteraction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {ResponseEmbed, SafeReply} from "../../helpers/responses";
 import {NotInGuildResponse} from "./team-shared";
 import {Team} from "@prisma/client";
@@ -6,7 +6,7 @@ import {GetMembersOfTeam} from "../../helpers/database";
 import {channelMention, userMention} from "@discordjs/builders";
 
 export const TeamInfo = async (
-    intr: CommandInteraction<CacheType>,
+    intr: ChatInputCommandInteraction<CacheType>,
     team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
@@ -23,8 +23,10 @@ export const TeamInfo = async (
 
     const embed = ResponseEmbed()
         .setTitle(team.displayName)
-        .addField("Team Members:", members.join("\n"))
-        .addField("Team Channels", channels.join("\n"));
+        .addFields([
+            {name: "Team Members:", value: members.join("\n")},
+            {name: "Team Channels", value: channels.join("\n")},
+        ]);
 
     return SafeReply(intr, {embeds: [embed]});
 };

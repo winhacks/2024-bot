@@ -1,7 +1,7 @@
 import {SlashCommandBuilder} from "@discordjs/builders";
-import {CacheType, CommandInteraction, Guild, GuildMember} from "discord.js";
+import {CacheType, ChatInputCommandInteraction, Guild, GuildMember} from "discord.js";
 import {Config} from "../config";
-import {DeleteHacker, GetHacker, GetHackerTeam} from "../helpers/database";
+import {GetHacker, GetHackerTeam} from "../helpers/database";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
 import {TakeUserRole} from "../helpers/userManagement";
@@ -14,7 +14,7 @@ const unverifyModule: CommandType = {
         .setName("unverify")
         .setDescription("Unverify yourself. You'll need to /verify again."),
     deferMode: "EPHEMERAL",
-    execute: async (intr: CommandInteraction<CacheType>): Promise<any> => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         if (!intr.inGuild()) {
             return SafeReply(intr, NotInGuildResponse());
         }

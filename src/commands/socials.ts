@@ -1,5 +1,5 @@
 import {hyperlink, SlashCommandBuilder} from "@discordjs/builders";
-import {CacheType, CommandInteraction} from "discord.js";
+import {CacheType, ChatInputCommandInteraction} from "discord.js";
 import {Config} from "../config";
 import {ErrorMessage, ResponseEmbed, SafeReply} from "../helpers/responses";
 import {CommandType} from "../types";
@@ -10,7 +10,7 @@ const socialsModule: CommandType = {
         .setName("socials")
         .setDescription("View the WinHacks socials."),
     deferMode: "NO-DEFER",
-    execute: async (intr: CommandInteraction<CacheType>): Promise<any> => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         if (!intr.inGuild()) {
             return SafeReply(intr, NotInGuildResponse());
         }

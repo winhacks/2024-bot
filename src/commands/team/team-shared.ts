@@ -3,12 +3,13 @@ import {
     GuildTextBasedChannel,
     OverwriteResolvable,
     PermissionOverwriteOptions,
-    Permissions,
+    PermissionsBitField,
     TextChannel,
     User,
     VoiceChannel,
+    ChannelType,
+    OverwriteType,
 } from "discord.js";
-import {ChannelTypes} from "discord.js/typings/enums";
 import {Config} from "../../config";
 import {
     RemoveHackerFromTeam,
@@ -26,23 +27,23 @@ import {DiscordCategory, Team} from "@prisma/client";
 // PERMISSIONS ----------------------------------------------------------------
 
 export const TEAM_MEMBER_PERMS: PermissionOverwriteOptions = {
-    VIEW_CHANNEL: true,
-    CONNECT: true,
-    SPEAK: true,
-    SEND_MESSAGES: true,
+    ViewChannel: true,
+    Connect: true,
+    Speak: true,
+    SendMessages: true,
 };
 export const NOT_TEAM_MEMBER_PERMS: PermissionOverwriteOptions = {
-    VIEW_CHANNEL: false,
-    CONNECT: false,
-    SPEAK: false,
-    SEND_MESSAGES: false,
+    ViewChannel: false,
+    Connect: false,
+    Speak: false,
+    SendMessages: false,
 };
 
 const FLAG_SET = [
-    Permissions.FLAGS.VIEW_CHANNEL,
-    Permissions.FLAGS.SEND_MESSAGES,
-    Permissions.FLAGS.CONNECT,
-    Permissions.FLAGS.SPEAK,
+    PermissionsBitField.Flags.ViewChannel,
+    PermissionsBitField.Flags.SendMessages,
+    PermissionsBitField.Flags.Connect,
+    PermissionsBitField.Flags.Speak,
 ];
 
 // RESPONSES ------------------------------------------------------------------
@@ -190,11 +191,11 @@ export const MakeTeamPermissions = (
     forMembers: string[]
 ): OverwriteResolvable[] => {
     const overwrites: OverwriteResolvable[] = [
-        {id: guild.roles.everyone, type: "role", deny: FLAG_SET},
+        {id: guild.roles.everyone, type: OverwriteType.Role, deny: FLAG_SET},
     ];
 
     for (const member of forMembers) {
-        overwrites.push({id: member, type: "member", allow: FLAG_SET});
+        overwrites.push({id: member, type: OverwriteType.Member, allow: FLAG_SET});
     }
 
     for (const name of Config.teams.moderator_roles) {
@@ -211,7 +212,7 @@ export const MakeTeamPermissions = (
 
         overwrites.push({
             id: roleId,
-            type: "role",
+            type: OverwriteType.Role,
             allow: FLAG_SET,
         });
     }
@@ -229,14 +230,15 @@ export const MakeTeamChannels = async (
     const overwrites = MakeTeamPermissions(guild, teamName, [forMember]);
     const channelName = Discordify(teamName);
     return Promise.all([
-        guild.channels.create(channelName, {
-            type: ChannelTypes.GUILD_TEXT,
+        guild.channels.create({
+            name: channelName,
+            type: ChannelType.GuildText,
             parent: category.categoryId,
             permissionOverwrites: overwrites,
         }),
-
-        guild.channels.create(channelName + "-voice", {
-            type: ChannelTypes.GUILD_VOICE,
+        guild.channels.create({
+            name: channelName + "-voice",
+            type: ChannelType.GuildVoice,
             parent: category.categoryId,
             permissionOverwrites: overwrites,
         }),
@@ -265,8 +267,9 @@ export const GetUnfilledTeamCategory = async (guild: Guild): Promise<DiscordCate
     // no free category, need to create
     const categoryCount = discordCategories.length;
     const newCategoryName = `${Config.teams.category_base_name} ${categoryCount + 1}`;
-    const newCategory = await guild.channels.create(newCategoryName, {
-        type: ChannelTypes.GUILD_CATEGORY,
+    const newCategory = await guild.channels.create({
+        name: newCategoryName,
+        type: ChannelType.GuildCategory,
     });
 
     // insert new category group in database
@@ -308,8 +311,8 @@ const HandleMemberLeave = async (
         }
 
         // Resolve team channels
-        let text = await guild!.channels.fetch(team.textChannelId);
-        let voice = await guild!.channels.fetch(team.voiceChannelId);
+        const text = await guild!.channels.fetch(team.textChannelId) as TextChannel;
+        const voice = await guild!.channels.fetch(team.voiceChannelId) as VoiceChannel;
         if (!text || !voice) {
             error = "Failed to get team channels";
             return false;

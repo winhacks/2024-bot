@@ -3,12 +3,12 @@ import {
     SlashCommandBuilder,
     SlashCommandStringOption,
 } from "@discordjs/builders";
-import {CacheType, CommandInteraction, GuildMember} from "discord.js";
+import {CacheType, ChatInputCommandInteraction, GuildMember} from "discord.js";
 import {Config} from "../config";
 import {PrettyUser} from "../helpers/misc";
 import {ErrorMessage, SafeReply, SuccessMessage} from "../helpers/responses";
 import {GetUserData} from "../helpers/sheetsAPI";
-import {GiveUserRole, RenameUser, TakeUserRole} from "../helpers/userManagement";
+import {GiveUserRole, RenameUser} from "../helpers/userManagement";
 import {logger} from "../logger";
 import {CommandType} from "../types";
 import {NotInGuildResponse} from "./team/team-shared";
@@ -29,7 +29,7 @@ const verifyModule: CommandType = {
                 .setRequired(true)
         ),
     deferMode: "EPHEMERAL",
-    execute: async (intr: CommandInteraction<CacheType>): Promise<any> => {
+    execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         // ensure command running in guild
         if (!intr.inGuild()) {
             return SafeReply(intr, NotInGuildResponse());

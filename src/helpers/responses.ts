@@ -19,17 +19,17 @@ import {logger} from "../logger";
  * @param reply The reply to send
  * @returns A promise to the reply, just as if `intr.reply` had been used.
  */
-export const SafeReply = (
+export const SafeReply = async (
     intr: CommandInteraction<CacheType> | MessageComponentInteraction,
     reply: string | MessagePayload | InteractionReplyOptions
 ) => {
     try {
         if (intr.replied) {
-            return intr.followUp(reply);
+            return await intr.followUp(reply);
         } else if (intr.deferred) {
-            return intr.editReply(reply);
+            return await intr.editReply(reply);
         } else {
-            return intr.reply(reply);
+            return await intr.reply(reply);
         }
     } catch (err) {
         logger.error(`Reply failed: ${err}`);

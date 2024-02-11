@@ -32,14 +32,14 @@ const verifyModule: CommandType = {
     execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         // ensure command running in guild
         if (!intr.inGuild()) {
-            return SafeReply(intr, NotInGuildResponse());
+            return await SafeReply(intr, NotInGuildResponse());
         }
 
         const email = intr.options.getString("email", true).toLowerCase();
 
         // ensure email is valid
         if (!email.match(emailRegex)) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Invalid Email",
@@ -61,7 +61,7 @@ const verifyModule: CommandType = {
         if (existingHacker) {
             // if they appear to be changing their email, we can provide them with some help :)
             if (existingHacker.email !== email) {
-                return SafeReply(
+                return await SafeReply(
                     intr,
                     ErrorMessage({
                         emote: ":confused:",
@@ -75,7 +75,7 @@ const verifyModule: CommandType = {
                 );
             }
 
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     emote: ":fire:",
@@ -86,7 +86,7 @@ const verifyModule: CommandType = {
         }
 
         if (await IsEmailVerified(email)) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     emote: ":fire:",
@@ -102,7 +102,7 @@ const verifyModule: CommandType = {
         const userData = await GetUserData(email);
         if (!userData) {
             const registerLink = Config.verify.registration_url;
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Verification Failed",
@@ -117,7 +117,7 @@ const verifyModule: CommandType = {
         // HOTFIX: Discord prevents nicknames over 32 characters, lets give a nice error for that
         const nickname = `${userData.firstName} ${userData.lastName}`;
         if (nickname.length > 32) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     message: [
@@ -141,12 +141,12 @@ const verifyModule: CommandType = {
             );
 
             if (!verifiedRole) {
-                return SafeReply(intr, ErrorMessage());
+                return await SafeReply(intr, ErrorMessage());
             }
 
             const giveRoleError = await GiveUserRole(member, verifiedRole);
             if (giveRoleError) {
-                return SafeReply(intr, ErrorMessage());
+                return await SafeReply(intr, ErrorMessage());
             }
         }
 
@@ -159,7 +159,7 @@ const verifyModule: CommandType = {
         );
 
         if (!user) {
-            return SafeReply(intr, ErrorMessage());
+            return await SafeReply(intr, ErrorMessage());
         }
 
         const isGuildOwner = member.id === guild!.ownerId;
@@ -171,14 +171,14 @@ const verifyModule: CommandType = {
         logger.info(`Verified "${PrettyUser(intr.user)}" with ${email}`);
 
         if (!isGuildOwner) {
-            return SafeReply(intr, SuccessMessage({message: "You are now verified."}));
+            return await SafeReply(intr, SuccessMessage({message: "You are now verified."}));
         } else {
             logger.warn(
                 `${PrettyUser(
                     intr.user
                 )} is the guild owner, asking them to update their nick manually.`
             );
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 SuccessMessage({
                     message: [

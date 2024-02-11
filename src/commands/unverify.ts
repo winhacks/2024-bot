@@ -16,13 +16,13 @@ const unverifyModule: CommandType = {
     deferMode: "EPHEMERAL",
     execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         if (!intr.inGuild()) {
-            return SafeReply(intr, NotInGuildResponse());
+            return await SafeReply(intr, NotInGuildResponse());
         }
 
         // check for existing user
         const existingHacker = await GetHacker(intr.user.id);
         if (!existingHacker) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Not Verified",
@@ -34,7 +34,7 @@ const unverifyModule: CommandType = {
         // check if user is in team
         const userTeam = await GetHackerTeam(intr.user.id);
         if (userTeam !== null) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Already In A Team",
@@ -50,12 +50,12 @@ const unverifyModule: CommandType = {
         try {
             await HandleUnverify(guild, member);
         } catch {
-            return SafeReply(intr, ErrorMessage());
+            return await SafeReply(intr, ErrorMessage());
         }
 
         intr.client.emit("userUnverified", member);
         logger.info(`Un-verified ${PrettyUser(intr.user)}`);
-        return SafeReply(intr, SuccessMessage({message: "You're no longer verified."}));
+        return await SafeReply(intr, SuccessMessage({message: "You're no longer verified."}));
     },
 };
 

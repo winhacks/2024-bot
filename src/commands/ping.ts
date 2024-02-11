@@ -62,7 +62,7 @@ const pingModule: CommandType = {
             ]);
         }
 
-        return SafeReply(intr, {
+        return await SafeReply(intr, {
             ephemeral: intr.options.getBoolean("ephemeral") ?? true,
             embeds: [embed],
         });

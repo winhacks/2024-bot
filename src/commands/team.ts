@@ -62,7 +62,7 @@ const teamModule: CommandType = {
         // team should exist for the rest, so look it up
         const team = await GetHackerTeam(intr.user.id);
         if (!team) {
-            return SafeReply(intr, NotInTeamResponse(true));
+            return await SafeReply(intr, NotInTeamResponse(true));
         }
 
         // info/leave command can be used anywhere
@@ -74,7 +74,7 @@ const teamModule: CommandType = {
             return InviteToTeam(intr, team);
         }
 
-        return SafeReply(intr, ErrorMessage());
+        return await SafeReply(intr, ErrorMessage());
     },
 };
 

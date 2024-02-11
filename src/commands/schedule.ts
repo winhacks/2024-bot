@@ -16,7 +16,7 @@ const scheduleModule: CommandType = {
             .setDescription(
                 "Head to our website to see all of our events and workshops! https://winhacks.ca/#schedule"
             );
-        return SafeReply(intr, {embeds: [embed]});
+        return await SafeReply(intr, {embeds: [embed]});
     },
 };
 

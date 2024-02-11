@@ -13,7 +13,7 @@ const interactionHandlerModule: EventType = {
 
         const command = client.commands.get(intr.commandName);
         if (!command) {
-            SafeReply(intr, ErrorMessage());
+            await SafeReply(intr, ErrorMessage());
             return;
         }
 
@@ -25,7 +25,7 @@ const interactionHandlerModule: EventType = {
             await command.execute(intr);
         } catch (err) {
             logger.error(err);
-            SafeReply(intr, ErrorMessage());
+            await SafeReply(intr, ErrorMessage());
         }
     },
 };

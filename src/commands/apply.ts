@@ -26,7 +26,7 @@ const applyModule: CommandType = {
                 `Welcome to WinHacks!\n\n${applyInstructions}. Then ${verifyInstructions}.`
             );
 
-        return SafeReply(intr, {embeds: [embed], ephemeral: true});
+        return await SafeReply(intr, {embeds: [embed], ephemeral: true});
     },
 };
 

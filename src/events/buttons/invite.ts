@@ -40,7 +40,7 @@ const inviteAction: ButtonAction = {
                 `${Config.bot_info.event_name} Discord server`,
                 "https://discord.com/invite/xUV9yBqjH4"
             );
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     title: "Not Verified",
@@ -59,7 +59,7 @@ const inviteAction: ButtonAction = {
         if (action === InviteAction.Accept) {
             const existingTeam = await GetHackerTeam(intr.user.id);
             if (existingTeam) {
-                return SafeReply(
+                return await SafeReply(
                     intr,
                     ErrorMessage({
                         title: "Already on a team",

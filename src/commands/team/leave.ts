@@ -6,15 +6,15 @@ import {Team} from "@prisma/client";
 
 export const LeaveTeam = async (intr: ChatInputCommandInteraction<CacheType>, team: Team) => {
     if (!intr.inGuild()) {
-        return SafeReply(intr, NotInGuildResponse());
+        return await SafeReply(intr, NotInGuildResponse());
     }
 
     const leaveError = await HandleLeaveTeam(intr.guild!, intr.user, team);
     if (leaveError) {
         logger.error(leaveError);
-        return SafeReply(intr, ErrorMessage({ephemeral: true}));
+        return await SafeReply(intr, ErrorMessage({ephemeral: true}));
     } else {
-        return await SafeReply(
+        return await await SafeReply(
             intr,
             SuccessMessage({
                 message: `You left Team ${team.displayName} successfully.`,

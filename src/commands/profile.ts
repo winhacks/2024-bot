@@ -27,7 +27,7 @@ const profileModule: CommandType = {
                     `${bold("Team")}: ${teamName}`,
                 ].join("\n")
             );
-        return SafeReply(intr, {embeds: [embed]});
+        return await SafeReply(intr, {embeds: [embed]});
     },
 };
 

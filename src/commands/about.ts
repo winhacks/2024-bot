@@ -20,7 +20,7 @@ const aboutModule: CommandType = {
             embed.setThumbnail(Config.bot_info.thumbnail);
         }
 
-        return SafeReply(interaction, {embeds: [embed]});
+        return await SafeReply(interaction, {embeds: [embed]});
     },
 };
 

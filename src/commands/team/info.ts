@@ -10,7 +10,7 @@ export const TeamInfo = async (
     team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
-        return SafeReply(intr, NotInGuildResponse());
+        return await SafeReply(intr, NotInGuildResponse());
     }
 
     const members = (await GetMembersOfTeam(team.stdName))
@@ -28,5 +28,5 @@ export const TeamInfo = async (
             {name: "Team Channels", value: channels.join("\n")},
         ]);
 
-    return SafeReply(intr, {embeds: [embed]});
+    return await SafeReply(intr, {embeds: [embed]});
 };

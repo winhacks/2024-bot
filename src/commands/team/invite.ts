@@ -21,14 +21,14 @@ export const InviteToTeam = async (
     team: Team
 ): Promise<any> => {
     if (!intr.inGuild()) {
-        return SafeReply(intr, NotInGuildResponse());
+        return await SafeReply(intr, NotInGuildResponse());
     }
 
     const invitee = intr.options.getUser("user", true);
 
     // trivial check to see if a user is inviting themself
     if (intr.user.id === invitee.id && !Config.dev_mode) {
-        return SafeReply(
+        return await SafeReply(
             intr,
             ErrorMessage({
                 emote: ":thinking:",
@@ -45,7 +45,7 @@ export const InviteToTeam = async (
     const teamMemberIds = teamMembers.map((member) => member.discordId);
 
     if (teamMemberIds.length >= Config.teams.max_team_size) {
-        return SafeReply(intr, TeamFullResponse());
+        return await SafeReply(intr, TeamFullResponse());
     }
 
     /**
@@ -57,7 +57,7 @@ export const InviteToTeam = async (
 
     const inviteeHacker = await GetHacker(invitee.id);
     if (!inviteeHacker) {
-        return SafeReply(
+        return await SafeReply(
             intr,
             ErrorMessage({
                 title: "User Not Verified",
@@ -70,7 +70,7 @@ export const InviteToTeam = async (
     }
 
     if (teamMemberIds.includes(invitee.id)) {
-        return SafeReply(
+        return await SafeReply(
             intr,
             ErrorMessage({
                 emote: ":thinking:",
@@ -83,7 +83,7 @@ export const InviteToTeam = async (
     const invite = await UpsertInvite(invitee.id, team.stdName);
     if (!invite) {
         const mention = userMention(invitee.id);
-        return SafeReply(
+        return await SafeReply(
             intr,
             ErrorMessage({
                 title: "Failed to Invite " + mention,
@@ -122,7 +122,7 @@ export const InviteToTeam = async (
         .catch(() => (message = null));
 
     if (message === null) {
-        return SafeReply(
+        return await SafeReply(
             intr,
             ErrorMessage({
                 title: `Unable to DM ${userMention(invitee.id)}`,
@@ -151,9 +151,9 @@ export const InviteToTeam = async (
     // and push a notification to the team text channel.
 
     if (intr.channelId === teamText?.id) {
-        return SafeReply(intr, {embeds: [invitedEmbed]});
+        return await SafeReply(intr, {embeds: [invitedEmbed]});
     } else {
         await teamText?.send({embeds: [invitedEmbed]});
-        return SafeReply(intr, {embeds: [invitedEmbed], ephemeral: true});
+        return await SafeReply(intr, {embeds: [invitedEmbed], ephemeral: true});
     }
 };

@@ -18,7 +18,7 @@ const streamModule: CommandType = {
         );
 
         if (!twitchSocial) {
-            return SafeReply(intr, ErrorMessage({ephemeral: true}));
+            return await SafeReply(intr, ErrorMessage({ephemeral: true}));
         }
 
         const embed = ResponseEmbed()
@@ -26,7 +26,7 @@ const streamModule: CommandType = {
             .setDescription(
                 `Join us live on the UWindsor CSS Twitch channel, which can be found at ${twitchSocial.link}.`
             );
-        return SafeReply(intr, {embeds: [embed]});
+        return await SafeReply(intr, {embeds: [embed]});
     },
 };
 

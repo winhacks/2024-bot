@@ -28,7 +28,7 @@ export const CreateTeamSubcommand = async (
     intr: ChatInputCommandInteraction<CacheType>
 ): Promise<any> => {
     if (!intr.guild) {
-        return SafeReply(intr, NotInGuildResponse());
+        return await SafeReply(intr, NotInGuildResponse());
     }
 
     await SafeDeferReply(intr, true);
@@ -38,7 +38,7 @@ export const CreateTeamSubcommand = async (
         .trim()
         .replaceAll(/\s\s+/g, " ");
     if (!ValidateTeamName(teamName)) {
-        return SafeReply(intr, InvalidNameResponse());
+        return await SafeReply(intr, InvalidNameResponse());
     }
 
     /**
@@ -50,21 +50,21 @@ export const CreateTeamSubcommand = async (
 
     const existingTeam = await GetTeam(teamName);
     if (existingTeam) {
-        return SafeReply(intr, NameTakenResponse());
+        return await SafeReply(intr, NameTakenResponse());
     }
 
     const hacker = await GetHacker(intr.user.id);
     if (!hacker) {
-        return SafeReply(intr, NotVerifiedResponse());
+        return await SafeReply(intr, NotVerifiedResponse());
     } else if (hacker!.teamStdName != null) {
-        return SafeReply(intr, AlreadyInTeamResponse());
+        return await SafeReply(intr, AlreadyInTeamResponse());
     }
 
     // Create Text and Voice channels
     const newChannels = await MakeTeamChannels(intr.guild!, teamName, intr.user.id);
     if (!newChannels) {
         logger.error("Failed to make team channels");
-        return SafeReply(intr, ErrorMessage());
+        return await SafeReply(intr, ErrorMessage());
     }
 
     const [teamText, teamVoice] = newChannels;
@@ -91,11 +91,11 @@ export const CreateTeamSubcommand = async (
     });
 
     if (!success) {
-        return SafeReply(intr, ErrorMessage());
+        return await SafeReply(intr, ErrorMessage());
     }
 
     const remainingTeamCapacity = Config.teams.max_team_size - 1;
-    return SafeReply(
+    return await SafeReply(
         intr,
         SuccessMessage({
             message: [

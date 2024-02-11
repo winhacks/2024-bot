@@ -12,11 +12,11 @@ const socialsModule: CommandType = {
     deferMode: "NO-DEFER",
     execute: async (intr: ChatInputCommandInteraction<CacheType>): Promise<any> => {
         if (!intr.inGuild()) {
-            return SafeReply(intr, NotInGuildResponse());
+            return await SafeReply(intr, NotInGuildResponse());
         }
 
         if (!Config.socials || Config.socials.length === 0) {
-            return SafeReply(
+            return await SafeReply(
                 intr,
                 ErrorMessage({
                     emote: ":face_with_monocle:",
@@ -37,7 +37,7 @@ const socialsModule: CommandType = {
         }
 
         embed.setDescription(lines.join("\n"));
-        return SafeReply(intr, {embeds: [embed]});
+        return await SafeReply(intr, {embeds: [embed]});
     },
 };
 
